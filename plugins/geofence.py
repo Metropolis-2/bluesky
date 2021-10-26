@@ -1,5 +1,7 @@
 from bluesky import settings, stack
 from bluesky.tools import aero, areafilter, geo
+from rtree import index
+from shapely.geometry import LineString, Polygon
 
 settings.set_variable_defaults(geofence_dtlookahead=30)
 
@@ -30,12 +32,33 @@ class Geofence(areafilter.Poly):
     
         This class subclasses Shape, and adds Geofence-specific data and methods.
     '''
-    # Keep a dict of geofences
-    geofences = dict()
+    # Keep dicts of geofences by either name or rtree ID
+    geo_by_name = dict()
+    geo_by_id = dict()
+    
+    # Also have a dictionary used for saving and loading geofences
+    geo_save_dict = dict()
+    
+    # Keep an Rtree of geofences
+    geo_tree = index.Index()
 
-    def __init__(self, name, coordinates, top, bottom):
+    def __init__(self, name, coordinates, top=999999, bottom=-999999):
         super().__init__(name, coordinates, top=top, bottom=bottom)
         self.active = True
+        #Add info to geofence save dictionary
+        geo_dict = dict()
+        geo_dict['name'] = name
+        geo_dict['coordinates'] = coordinates
+        geo_dict['top'] = top
+        geo_dict['bottom'] = bottom
+        Geofence.geo_save_dict['name'] = geo_dict
+        
+        # Also add the class instance itself to the other dictionaries
+        Geofence.geo_by_name['name'] = self
+        Geofence.geo_by_id[self.area_id] = self
+        
+        # Insert the geofence in the geofence Rtree
+        Geofence.geo_tree.insert(self.area_id, self.bbox)
 
     def intersects(self, line):
         ''' Check whether given line intersects with this geofence poly. '''
