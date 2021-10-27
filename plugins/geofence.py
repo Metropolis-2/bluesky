@@ -1,7 +1,7 @@
 from bluesky import settings, stack
 from bluesky.tools import aero, areafilter, geo
 from rtree import index
-from shapely.geometry import LineString, Polygon
+from matplotlib.path import Path
 
 settings.set_variable_defaults(geofence_dtlookahead=30)
 
@@ -62,7 +62,8 @@ class Geofence(areafilter.Poly):
 
     def intersects(self, line):
         ''' Check whether given line intersects with this geofence poly. '''
-        pass
+        line_path = Path(line)
+        return self.border.intersects_path(line_path)
 
     @classmethod
     def reset(cls):
