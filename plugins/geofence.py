@@ -41,6 +41,13 @@ class Geofence(areafilter.Poly):
     
     # Keep an Rtree of geofences
     geo_tree = index.Index()
+    
+    # Keep track of the geofences themselves that aircraft are hitting or intruding in
+    # "intrusions" contains aircraft that are currently intruding inside a geofence, and a list
+    # of the geofences they are intruding in
+    # "hits" contains the geofences that aircraft are about to hit (or are intruding)
+    intrusions = dict()
+    hits = dict()
 
     def __init__(self, name, coordinates, top=999999, bottom=-999999):
         super().__init__(name, coordinates, top=top, bottom=bottom)
@@ -64,28 +71,55 @@ class Geofence(areafilter.Poly):
         ''' Check whether given line intersects with this geofence poly. '''
         line_path = Path(line)
         return self.border.intersects_path(line_path)
-
+        
     @classmethod
     def reset(cls):
         ''' Reset geofence database when simulation is reset. '''
-        cls.geofences.clear()
+        cls.geo_by_name.clear()
+        cls.geo_by_id.clear()
+        cls.geo_save_dict.clear()
+        cls.geo_tree = index.Index()
+        cls.hits.clear()
+        cls.intrusions.clear()
+        
+    @classmethod
+    def intersecting(cls, coordinates):
+        '''Get the geofences that intersect coordinates (either bbox or point).'''
+        poly_ids = cls.geo_tree.intersection(coordinates)
+        return [cls.geo_by_id[id] for id in poly_ids]
 
     @classmethod
     def detect_all(cls, traf, dtlookahead=None):
         if dtlookahead is None:
             dtlookahead = settings.geofence_dtlookahead
-        
+        # Reset the hits dict
+        cls.hits.reset()
         # Linearly extrapolate current state to prefict future position
-        pred_lat, pred_lon = geo.kwikpos(traf.lat, traf.lon, traf.hdg, traf.gs / aero.nm)
-        hits_per_ac = []
+        pred_lat, pred_lon = geo.kwikpos(traf.lat, traf.lon, traf.hdg, traf.gs / aero.nm * dtlookahead)
         for idx, line in zip(traf.lat, traf.lon, pred_lat, pred_lon):
-            hits = []
+            acid = traf.id[idx]
             # First a course detection based on geofence bounding boxes
             potential_hits = areafilter.get_intersecting(*line)
             # Then a fine-grained intersection detection
+            hits = []
             for geofence in potential_hits:
                 if geofence.intersects(line):
                     hits.append(geofence)
-            hits_per_ac.append(hits)
-
-        return hits_per_ac
+            cls.hits[acid] = hits
+        return
+    
+    @classmethod
+    def detect_inside(cls, traf):
+        # Reset the intrusions dict
+        cls.intrusions.reset()
+        for idx, point in zip(traf.lat, traf.lon, traf.alt):
+            acid = traf.id[idx]
+            # First, a course detection based on geofence bounding boxes
+            potential_intrusions = cls.intersecting([point[0], point[1]])
+            # Then a fine-grained intrusion detection
+            intrusions = []
+            for geofence in potential_intrusions:
+                if geofence.checkInside(*point):
+                    intrusions.append(geofence)
+            cls.intrusions[acid] = intrusions
+        return
