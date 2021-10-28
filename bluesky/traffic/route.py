@@ -3,6 +3,7 @@ from os import path
 from weakref import WeakValueDictionary
 from numpy import *
 import bluesky as bs
+import time
 from bluesky.tools import geo
 from bluesky.core import Replaceable
 from bluesky.tools.aero import ft, kts, g0, nm, mach2cas, casormach2tas
@@ -43,6 +44,8 @@ class Route(Replaceable):
         # Aircraft id (callsign) of the aircraft to which this route belongs
         self.acid = acid
         self.nwp = 0
+        self.time = time.time()
+        self.timeswitch = True
 
         #Vertical fms logc: enable Top of CLimb & Top of Descent logic
         self.swtoc = True
@@ -358,7 +361,7 @@ class Route(Replaceable):
             acrte.direct(acidx, acrte.wpname[norig])  # 0 if no orig
             #print("direct ",self.wpname[norig])
             bs.traf.swlnav[acidx] = True
-
+        
         if afterwp and acrte.wpname.count(afterwp) == 0:
             print(afterwp, acrte.wpname)
             return True, "Waypoint " + afterwp + " not found\n" + \
@@ -368,7 +371,6 @@ class Route(Replaceable):
     
     @stack.command
     def addwaypoints(acidx: 'acid', *args):
-        import time
         time1 = time.time()
         # Args come in this order: lat, lon, alt, spd, TURNSPD/TURNRAD/FLYBY, turnspeed or turnrad value
         # If turn is '0', then ignore turnspeed
@@ -381,13 +383,20 @@ class Route(Replaceable):
         
         args = reshape(args, (int(len(args)/6), 6))
         
-        for wpdata in args:
-            #First, set either as flyby or flyturn        
+        for wpdata in args:   
             # Get needed values
             lat = float(wpdata[0]) # deg
             lon = float(wpdata[1]) # deg
-            alt = txt2alt(wpdata[2]) # comes in feet, convert
-            spd = txt2spd(wpdata[3])
+            if wpdata[2]:
+                alt = txt2alt(wpdata[2]) # comes in feet, convert
+            else:
+                alt = -999
+            if wpdata[3]:
+                spd = txt2spd(wpdata[3])
+            else:
+                spd = -999
+            
+            # Do flyby or flyturn processing
             if wpdata[4] in ['TURNSPD', 'TURNSPEED']:
                 acrte.turnspd = txt2spd(wpdata[5])
                 acrte.swflyby   = False
@@ -409,7 +418,43 @@ class Route(Replaceable):
         
         # Calculate flight plan
         acrte.calcfp()
-        print(f'New command took {time1-time.time()}s.')
+        
+        # Check for success by checking inserted location in flight plan >= 0
+        if wpidx < 0:
+            return False, "Waypoint " + name + " not added."
+            
+        print(f'New command took {time.time()-time1}s.')
+        
+    def addwpt_simple(self, iac, name, wptype, lat, lon, alt=-999., spd=-999.):
+        """Adds waypoint in the most simple way possible"""
+        # For safety
+        self.nwp = len(self.wplat)
+
+        name = name.upper().strip()
+
+        wplat = lat
+        wplon = lon
+
+        # Check if name already exists, if so add integer 01, 02, 03 etc.
+        newname = Route.get_available_name(
+            self.wpname, name, 3)
+        
+        self.addwpt_data(
+            False, self.nwp, newname, wplat, wplon, wptype, alt, spd)
+
+        idx = self.nwp
+        self.nwp += 1
+
+        #update qdr and "last waypoint switch" in traffic
+        if idx>=0:
+            bs.traf.actwp.next_qdr[iac] = self.getnextqdr()
+            bs.traf.actwp.swlastwp[iac] = (self.iactwp==self.nwp-1)
+
+        # Update autopilot settings
+        if 0 <= self.iactwp < self.nwp:
+            self.direct(iac, self.wpname[self.iactwp])
+            
+        return idx
             
     @stack.command
     @staticmethod
@@ -811,33 +856,6 @@ class Route(Replaceable):
             self.direct(iac, self.wpname[self.iactwp])
 
 
-        return idx
-    
-    def addwpt_simple(self, iac, name, wptype, lat, lon, alt=-999., spd=-999.):
-        """Adds waypoint in the most simple way possible"""
-        # For safety
-        self.nwp = len(self.wplat)
-
-        name = name.upper().strip()
-
-        wplat = lat
-        wplon = lon
-
-        # Check if name already exists, if so add integer 01, 02, 03 etc.
-        newname = Route.get_available_name(
-            self.wpname, name, 3)
-        
-        self.addwpt_data(
-            False, self.nwp, newname, wplat, wplon, wptype, alt, spd)
-
-        idx = self.nwp
-        self.nwp += 1
-
-        #update qdr and "last waypoint switch" in traffic
-        if idx>=0:
-            bs.traf.actwp.next_qdr[iac] = self.getnextqdr()
-            bs.traf.actwp.swlastwp[iac] = (self.iactwp==self.nwp-1)
-            
         return idx
 
     @stack.command(aliases=("DIRECTTO", "DIRTO"))
