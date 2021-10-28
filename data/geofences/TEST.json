@@ -1,0 +1,30 @@
+{
+    "FIRST": {
+        "name": "FIRST",
+        "coordinates": [
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0
+        ],
+        "top": 10.0,
+        "bottom": 0.0
+    },
+    "SECOND": {
+        "name": "SECOND",
+        "coordinates": [
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0
+        ],
+        "top": 10.0,
+        "bottom": 0.0
+    }
+}

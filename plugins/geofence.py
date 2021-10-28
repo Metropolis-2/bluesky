@@ -1,7 +1,9 @@
+import bluesky as bs
 from bluesky import settings, stack
 from bluesky.tools import aero, areafilter, geo
 from rtree import index
 from matplotlib.path import Path
+import json
 
 settings.set_variable_defaults(geofence_dtlookahead=30)
 
@@ -24,9 +26,38 @@ def geofence(name: 'txt', top: float, bottom: float, *coordinates: float):
         - bottom: The bottom of the geofence in feet.
         - coordinates: three or more lat/lon coordinates in degrees.
     '''
-    Geofence.geofences[name] = Geofence(name, top, bottom, coordinates)
+    Geofence(name, coordinates, top, bottom)
     return True, f'Created geofence {name}'
 
+@stack.command()
+def delgeofence(name: 'txt'):
+    ''' Delete a geofence.'''
+    Geofence.delete(name)
+
+@stack.command()
+def savegeofences(filename: 'txt'):
+    ''' Save the current loaded geofences.'''
+    if filename[-5:] != '.json':
+        filename = filename + '.json'
+    with open(f'data/geofences/{filename}', 'w') as f:
+        json.dump(Geofence.geo_save_dict, f, indent=4)
+    bs.scr.echo(f'Geofences saved to {filename}.')
+        
+@stack.command()
+def loadgeofences(filename: 'txt'):
+    '''Load a geofence file.'''
+    if filename[-5:] != '.json':
+        filename = filename + '.json'
+    with open(f'data/geofences/{filename}', 'r') as f:
+        try:
+            loaded_geo_dict = json.loads(f.read())
+        except:
+            bs.scr.echo(f'File empty or does not exist.')
+            return
+    for geofence in loaded_geo_dict.values():
+        Geofence(geofence['name'], geofence['coordinates'], geofence['top'], geofence['bottom'])
+    bs.scr.echo(f'Geofences loaded from {filename}.')
+        
 class Geofence(areafilter.Poly):
     ''' BlueSky Geofence class.
     
@@ -35,6 +66,7 @@ class Geofence(areafilter.Poly):
     # Keep dicts of geofences by either name or rtree ID
     geo_by_name = dict()
     geo_by_id = dict()
+    geo_name2id = dict()
     
     # Also have a dictionary used for saving and loading geofences
     geo_save_dict = dict()
@@ -58,11 +90,12 @@ class Geofence(areafilter.Poly):
         geo_dict['coordinates'] = coordinates
         geo_dict['top'] = top
         geo_dict['bottom'] = bottom
-        Geofence.geo_save_dict['name'] = geo_dict
+        Geofence.geo_save_dict[name] = geo_dict
         
         # Also add the class instance itself to the other dictionaries
-        Geofence.geo_by_name['name'] = self
+        Geofence.geo_by_name[name] = self
         Geofence.geo_by_id[self.area_id] = self
+        Geofence.geo_name2id[name] = self.area_id
         
         # Insert the geofence in the geofence Rtree
         Geofence.geo_tree.insert(self.area_id, self.bbox)
@@ -81,6 +114,15 @@ class Geofence(areafilter.Poly):
         cls.geo_tree = index.Index()
         cls.hits.clear()
         cls.intrusions.clear()
+        
+    @classmethod
+    def delete(cls, name):
+        cls.geo_by_name.pop(name)
+        cls.geo_save_dict.pop(name)
+        geo_id = cls.geo_name2id[name]
+        cls.geo_tree.delete(geo_id)
+        cls.geo_by_id.pop(geo_id)
+        cls.geo_name2id.pop(name)
         
     @classmethod
     def intersecting(cls, coordinates):
