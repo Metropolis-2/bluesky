@@ -365,7 +365,52 @@ class Route(Replaceable):
                 "waypoint added at end of route"
         else:
             return True
-
+    
+    @stack.command
+    def addwaypoints(acidx: 'acid', *args):
+        import time
+        time1 = time.time()
+        # Args come in this order: lat, lon, alt, spd, TURNSPD/TURNRAD/FLYBY, turnspeed or turnrad value
+        # If turn is '0', then ignore turnspeed
+        if len(args)%6 !=0:
+            bs.scr.echo('You missed a waypoint value, arguement number must be a multiple of 6.')
+            return
+        
+        acid = bs.traf.id[acidx]
+        acrte = Route._routes.get(acid)
+        
+        args = reshape(args, (int(len(args)/6), 6))
+        
+        for wpdata in args:
+            #First, set either as flyby or flyturn        
+            # Get needed values
+            lat = float(wpdata[0]) # deg
+            lon = float(wpdata[1]) # deg
+            alt = txt2alt(wpdata[2]) # comes in feet, convert
+            spd = txt2spd(wpdata[3])
+            if wpdata[4] in ['TURNSPD', 'TURNSPEED']:
+                acrte.turnspd = txt2spd(wpdata[5])
+                acrte.swflyby   = False
+                acrte.swflyturn = True
+            elif wpdata[4] in ['TURNRAD', 'TURNRADIUS']:
+                acrte.turnrad = float(wpdata[5])
+                acrte.swflyby   = False
+                acrte.swflyturn = True
+            else:
+                # Either it's a flyby, or a typo.
+                acrte.swflyby   = True
+                acrte.swflyturn = False
+                
+            
+            name    = acid
+            wptype  = Route.wplatlon
+            
+            wpidx = acrte.addwpt_simple(acidx, name, wptype, lat, lon, alt, spd)
+        
+        # Calculate flight plan
+        acrte.calcfp()
+        print(f'New command took {time1-time.time()}s.')
+            
     @stack.command
     @staticmethod
     def before(acidx : 'acid', beforewp: 'wpinroute', addwpt, waypoint, alt: 'alt' = None, spd: 'spd' = None):
@@ -766,6 +811,33 @@ class Route(Replaceable):
             self.direct(iac, self.wpname[self.iactwp])
 
 
+        return idx
+    
+    def addwpt_simple(self, iac, name, wptype, lat, lon, alt=-999., spd=-999.):
+        """Adds waypoint in the most simple way possible"""
+        # For safety
+        self.nwp = len(self.wplat)
+
+        name = name.upper().strip()
+
+        wplat = lat
+        wplon = lon
+
+        # Check if name already exists, if so add integer 01, 02, 03 etc.
+        newname = Route.get_available_name(
+            self.wpname, name, 3)
+        
+        self.addwpt_data(
+            False, self.nwp, newname, wplat, wplon, wptype, alt, spd)
+
+        idx = self.nwp
+        self.nwp += 1
+
+        #update qdr and "last waypoint switch" in traffic
+        if idx>=0:
+            bs.traf.actwp.next_qdr[iac] = self.getnextqdr()
+            bs.traf.actwp.swlastwp[iac] = (self.iactwp==self.nwp-1)
+            
         return idx
 
     @stack.command(aliases=("DIRECTTO", "DIRTO"))
