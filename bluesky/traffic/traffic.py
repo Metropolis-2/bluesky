@@ -11,7 +11,7 @@ import numpy as np
 
 import bluesky as bs
 from bluesky.core import Entity, timed_function
-from bluesky.stack import refdata
+from bluesky.stack import refdata, command
 from bluesky.stack.recorder import savecmd
 from bluesky.tools import geo
 from bluesky.tools.misc import latlon2txt
@@ -75,6 +75,8 @@ class Traffic(Entity):
         self.setroot(self)
 
         self.ntraf = 0
+        
+        self.minwindalt = 50.*ft
 
         self.cond = Condition()  # Conditional commands list
         self.wind = WindSim()
@@ -253,7 +255,7 @@ class Traffic(Entity):
 
         # Wind
         if self.wind.winddim > 0:
-            applywind         = self.alt[-n:]> 50.*ft
+            applywind         = self.alt[-n:]> self.minwindalt
             self.windnorth[-n:], self.windeast[-n:]  = self.wind.getdata(self.lat[-n:], self.lon[-n:], self.alt[-n:])
             self.gsnorth[-n:] = self.gsnorth[-n:] + self.windnorth[-n:]*applywind
             self.gseast[-n:]  = self.gseast[-n:]  + self.windeast[-n:]*applywind
@@ -484,7 +486,7 @@ class Traffic(Entity):
 
             self.trk = np.logical_not(applywind)*self.hdg + \
                        applywind*np.degrees(np.arctan2(self.gseast, self.gsnorth)) % 360.
-
+                       
         self.work += (self.perf.thrust * bs.sim.simdt * np.sqrt(self.gs * self.gs + self.vs * self.vs))
 
 
@@ -802,3 +804,8 @@ class Traffic(Entity):
         if self.swats[idx]:
             return True,"ATS of "+self.id[idx]+" is ON"
         return True, "ATS of " + self.id[idx] + " is OFF. THR is "+str(self.thr[idx])
+    
+    @command
+    def setminwindalt(self, alt:'alt'):
+        self.minwindalt = alt
+        return
