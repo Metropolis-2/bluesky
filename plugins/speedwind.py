@@ -44,16 +44,9 @@ class SpeedWind(WindSim):
         the wind magnitude and direction on the velocity of the aircraft, without affecting its
         heading or track, just the speed.'''
         # Get the velocities of aircraft
-        print('---------------------')
         hdg = np.deg2rad(bs.traf.hdg)
         gseast = bs.traf.gs * np.sin(hdg)
         gsnorth = bs.traf.gs * np.cos(hdg)
-        
-        print(f'hdg {hdg}')
-        print(f'gseast {gseast}')
-        print(f'gsnorth {gsnorth}')
-        print(f'mag {self.magnitude}')
-        print(f'dir {self.direction}')
         
         # Reshape to work with it.
         gsarr = np.reshape([gseast, gsnorth], (2, bs.traf.ntraf))
@@ -63,13 +56,7 @@ class SpeedWind(WindSim):
         
         # Create magnitudes
         veast = windmags*np.sin(hdg)
-        vnorth = windmags*np.cos(hdg)
-        
-        print(f'windvec {self.windvec}')
-        print(f'windmags {windmags}')
-        print(f'veast {veast}')
-        print(f'vnorth {vnorth}')
-        
+        vnorth = windmags*np.cos(hdg) 
 
         return vnorth, veast
         
