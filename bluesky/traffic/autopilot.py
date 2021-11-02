@@ -132,6 +132,10 @@ class Autopilot(Entity, replaceable=True):
                     lnavon, flyby, flyturn, turnrad, turnspd,\
                     bs.traf.actwp.next_qdr[i], bs.traf.actwp.swlastwp[i] =      \
                     self.route[i].getnextwp()  # note: xtoalt,toalt in [m]
+                    
+                bs.traf.actwp.nextturnlat[i], bs.traf.actwp.nextturnlon[i], \
+                bs.traf.actwp.nextturnspd[i], bs.traf.actwp.nextturnrad[i], \
+                bs.traf.actwp.nextturnidx[i] = self.route[i].getnextturnwp()
 
             # Prevent trying to activate the next waypoint when it was already the last waypoint
             else:
@@ -246,6 +250,17 @@ class Autopilot(Entity, replaceable=True):
         # qdr[deg],distinnm[nm]
         qdr, distinnm = geo.qdrdist(bs.traf.lat, bs.traf.lon,
                                     bs.traf.actwp.lat, bs.traf.actwp.lon)  # [deg][nm])
+        
+        qdrturn, dist2turn = geo.qdrdist(bs.traf.lat, bs.traf.lon,
+                                        bs.traf.actwp.nextturnlat, bs.traf.actwp.nextturnlon)
+        
+        self.qdrturn = qdrturn
+        dist2turn = dist2turn * nm
+        
+        # Where we don't have a turn waypoint, as in turn idx is negative, then put distance
+        # as Earth circumference.
+        self.dist2turn = np.where(bs.traf.actwp.nextturnidx > 0, dist2turn, 40075000)
+        
         self.qdr2wp  = qdr
         self.dist2wp = distinnm*nm  # Conversion to meters
 
@@ -306,13 +321,14 @@ class Autopilot(Entity, replaceable=True):
         # use the turn speed
 
         # Is turn speed specified and are we not already slow enough? We only decelerate for turns, not accel.
-        turntas       = np.where(bs.traf.actwp.turnspd>0.0, vcas2tas(bs.traf.actwp.turnspd, bs.traf.alt),
+        turntas       = np.where(bs.traf.actwp.nextturnspd>0.0, vcas2tas(bs.traf.actwp.nextturnspd, bs.traf.alt),
                                  -1.0+0.*bs.traf.tas)
-        swturnspd     = bs.traf.actwp.flyturn*(turntas>0.0)*(bs.traf.actwp.turnspd>0.0)
+        # Switch is now whether the aircraft has any turn waypoints
+        swturnspd     = bs.traf.actwp.nextturnidx > 0
         turntasdiff   = np.maximum(0.,(bs.traf.tas - turntas)*(turntas>0.0))
 
         # t = (v1-v0)/a ; x = v0*t+1/2*a*t*t => dx = (v1*v1-v0*v0)/ (2a)
-        dxturnspdchg = distaccel(turntas,bs.traf.tas, bs.traf.perf.axmax)
+        dxturnspdchg = distaccel(turntas,bs.traf.tas, bs.traf.perf.axmax) * 2
 #        dxturnspdchg = 0.5*np.abs(turntas*turntas-bs.traf.tas*bs.traf.tas)/(np.sign(turntas-bs.traf.tas)*np.maximum(0.01,np.abs(ax)))
 #        dxturnspdchg  = np.where(swturnspd, np.abs(turntasdiff)/np.maximum(0.01,ax)*(bs.traf.tas+0.5*np.abs(turntasdiff)),
 #                                                                   0.0*bs.traf.tas)
@@ -335,7 +351,7 @@ class Autopilot(Entity, replaceable=True):
         usenextspdcon = (self.dist2wp < dxspdconchg)*(bs.traf.actwp.nextspd>-990.) * \
                             bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav
         useturnspd = np.logical_or(bs.traf.actwp.turntonextwp,\
-                                   (self.dist2wp < dxturnspdchg+bs.traf.actwp.turndist) * \
+                                   (self.dist2turn < dxturnspdchg+bs.traf.actwp.turndist) * \
                                         swturnspd*bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav)
 
         # Hold turn mode can only be switched on here, cannot be switched off here (happeps upon passing wp)
@@ -354,7 +370,7 @@ class Autopilot(Entity, replaceable=True):
         bs.traf.actwp.turnfromlastwp = np.logical_and(bs.traf.actwp.turnfromlastwp,inoldturn)
 
         # Select speed: turn sped, next speed constraint, or current speed constraint
-        bs.traf.selspd = np.where(useturnspd,bs.traf.actwp.turnspd,
+        bs.traf.selspd = np.where(useturnspd,bs.traf.actwp.nextturnspd,
                                   np.where(usenextspdcon, bs.traf.actwp.nextspd,
                                            np.where((bs.traf.actwp.spdcon>=0)*bs.traf.swvnavspd,bs.traf.actwp.spd,
                                                                             bs.traf.selspd)))
