@@ -48,6 +48,40 @@
       "d_range_max": 10
     }
   },
+  "MP20": {
+    "name": "DJI Matrice 600 20KTS",
+    "n_engines": 6,
+    "engine_type": "TS",
+    "mtow": 15.1,
+    "oew": 9.1,
+    "mfc": 0,
+    "engines": [["Motor-6010-1", 0.482], ["Motor-6010-2", 0.482], ["Motor-6010-3", 0.482], ["Motor-6010-4", 0.482], ["Motor-6010-5", 0.482], ["Motor-6010-6",0.482]],
+    "envelop": {
+      "v_min": -16,
+      "v_max": 16,
+      "vs_min": -5,
+      "vs_max": 5,
+      "h_max": 2500,
+      "d_range_max": 10
+    }
+  },
+  "MP30": {
+    "name": "DJI Matrice 600 30KTS",
+    "n_engines": 6,
+    "engine_type": "TS",
+    "mtow": 15.1,
+    "oew": 9.1,
+    "mfc": 0,
+    "engines": [["Motor-6010-1", 0.482], ["Motor-6010-2", 0.482], ["Motor-6010-3", 0.482], ["Motor-6010-4", 0.482], ["Motor-6010-5", 0.482], ["Motor-6010-6",0.482]],
+    "envelop": {
+      "v_min": -11,
+      "v_max": 11,
+      "vs_min": -5,
+      "vs_max": 5,
+      "h_max": 2500,
+      "d_range_max": 10
+    }
+  },
    "Amzn": {
     "name": "Amazon octocopter",
     "n_engines": 8,
