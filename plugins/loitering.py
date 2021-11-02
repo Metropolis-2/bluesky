@@ -32,7 +32,7 @@ class Loitering(Entity):
         # There should be an aircraft index now
         acidx = bs.traf.id.index(acid)
         
-        # Insert a geofence in the traf array
-        self.geofences[acid] = Geofence(f'LOITER{acid}', geocoords)
+        # Store the geofence data in the array until it needs to be enacted
+        self.geofences[acid] = geocoords
         
     
