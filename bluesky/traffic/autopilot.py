@@ -200,7 +200,7 @@ class Autopilot(Entity, replaceable=True):
             bs.traf.actwp.turntonextwp[i]   = False
 
             # Keep both turning speeds: turn to leg and turn from leg
-            bs.traf.actwp.oldturnspd[i]  = bs.traf.actwp.turnspd[i] # old turnspd, turning by this waypoint
+            bs.traf.actwp.oldturnspd[i]  = bs.traf.actwp.nextturnspd[i] # old turnspd, turning by this waypoint
             if bs.traf.actwp.flyturn[i]:
                 bs.traf.actwp.turnspd[i] = turnspd                  # new turnspd, turning by next waypoint
             else:
@@ -328,7 +328,7 @@ class Autopilot(Entity, replaceable=True):
         turntasdiff   = np.maximum(0.,(bs.traf.tas - turntas)*(turntas>0.0))
 
         # t = (v1-v0)/a ; x = v0*t+1/2*a*t*t => dx = (v1*v1-v0*v0)/ (2a)
-        dxturnspdchg = distaccel(turntas,bs.traf.tas, bs.traf.perf.axmax) * 2
+        dxturnspdchg = distaccel(turntas,bs.traf.perf.vmax, bs.traf.perf.axmax)
 #        dxturnspdchg = 0.5*np.abs(turntas*turntas-bs.traf.tas*bs.traf.tas)/(np.sign(turntas-bs.traf.tas)*np.maximum(0.01,np.abs(ax)))
 #        dxturnspdchg  = np.where(swturnspd, np.abs(turntasdiff)/np.maximum(0.01,ax)*(bs.traf.tas+0.5*np.abs(turntasdiff)),
 #                                                                   0.0*bs.traf.tas)
@@ -351,7 +351,7 @@ class Autopilot(Entity, replaceable=True):
         usenextspdcon = (self.dist2wp < dxspdconchg)*(bs.traf.actwp.nextspd>-990.) * \
                             bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav
         useturnspd = np.logical_or(bs.traf.actwp.turntonextwp,\
-                                   (self.dist2turn < dxturnspdchg+bs.traf.actwp.turndist) * \
+                                   (self.dist2turn < (dxturnspdchg+bs.traf.actwp.turndist)) * \
                                         swturnspd*bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav)
 
         # Hold turn mode can only be switched on here, cannot be switched off here (happeps upon passing wp)
