@@ -48,8 +48,8 @@
       "d_range_max": 10
     }
   },
-  "MP20": {
-    "name": "DJI Matrice 600 20KTS",
+  "MP30": {
+    "name": "DJI Matrice 600 30KTS",
     "n_engines": 6,
     "engine_type": "TS",
     "mtow": 15.1,
@@ -65,8 +65,8 @@
       "d_range_max": 10
     }
   },
-  "MP30": {
-    "name": "DJI Matrice 600 30KTS",
+  "MP20": {
+    "name": "DJI Matrice 600 20KTS",
     "n_engines": 6,
     "engine_type": "TS",
     "mtow": 15.1,
