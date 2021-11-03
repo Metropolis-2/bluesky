@@ -3,7 +3,6 @@ from os import path
 from weakref import WeakValueDictionary
 from numpy import *
 import bluesky as bs
-import time
 from bluesky.tools import geo
 from bluesky.core import Replaceable
 from bluesky.tools.aero import ft, kts, g0, nm, mach2cas, casormach2tas
@@ -44,7 +43,6 @@ class Route(Replaceable):
         # Aircraft id (callsign) of the aircraft to which this route belongs
         self.acid = acid
         self.nwp = 0
-        self.time = time.time()
         self.timeswitch = True
 
         #Vertical fms logc: enable Top of CLimb & Top of Descent logic
@@ -371,7 +369,6 @@ class Route(Replaceable):
     
     @stack.command
     def addwaypoints(acidx: 'acid', *args):
-        time1 = time.time()
         # Args come in this order: lat, lon, alt, spd, TURNSPD/TURNRAD/FLYBY, turnspeed or turnrad value
         # If turn is '0', then ignore turnspeed
         if len(args)%6 !=0:
@@ -422,8 +419,6 @@ class Route(Replaceable):
         # Check for success by checking inserted location in flight plan >= 0
         if wpidx < 0:
             return False, "Waypoint " + name + " not added."
-            
-        print(f'New command took {time.time()-time1}s.')
         
     def addwpt_simple(self, iac, name, wptype, lat, lon, alt=-999., spd=-999.):
         """Adds waypoint in the most simple way possible"""
