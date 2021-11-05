@@ -12,7 +12,7 @@ def init_plugin():
     # Configuration parameters
     config = {
         # The name of your plugin
-        'plugin_name':     'SpeedWind',
+        'plugin_name':     'M2Wind',
 
         # The type of this plugin. For now, only simulation plugins are possible.
         'plugin_type':     'sim',
@@ -21,16 +21,15 @@ def init_plugin():
     # init_plugin() should always return a configuration dict.
     return config
 
-class SpeedWind(WindSim):
+class M2Wind(WindSim):
     def __init__(self):
         super().__init__()
         self.magnitude = 0
         self.direction = 0
         self.windvec = np.array([0,0])
-        bs.traf.speedwind = self
         
-    @stack.command(name = 'SETSPEEDWIND')
-    def setspeedwind(self, magnitude:'float', direction:'hdg'):
+    @stack.command(name = 'SETM2WIND')
+    def setm2wind(self, magnitude:'float', direction:'hdg'):
         self.magnitude = magnitude * kts
         self.direction = np.deg2rad(direction)
         # Calculate the vector

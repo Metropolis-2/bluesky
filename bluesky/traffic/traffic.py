@@ -474,7 +474,7 @@ class Traffic(Entity):
             self.windnorth[:], self.windeast[:] = 0.0,0.0
 
         else:
-            applywind = self.alt>50.*ft # Only apply wind when airborne
+            applywind = self.alt>self.minwindalt # Only apply wind when airborne
 
             vnwnd,vewnd = self.wind.getdata(self.lat, self.lon, self.alt)
             self.windnorth[:], self.windeast[:] = vnwnd,vewnd
