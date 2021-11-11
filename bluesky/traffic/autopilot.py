@@ -46,9 +46,11 @@ class Autopilot(Entity, replaceable=True):
             # LNAV variables
             self.qdr2wp      = np.array([]) # Direction to waypoint from the last time passing was checked
                                             # to avoid 180 turns due to updated qdr shortly before passing wp
-            self.dist2wp     = np.array([]) # [nm] Distance to active waypoint
+            self.dist2wp     = np.array([]) # [m] Distance to active waypoint
+            self.qdrturn     = np.array([]) # qdr to next turn]
+            self.dist2turn   = np.array([]) # Distance to next turn [m]
 
-
+            self.inturn = np.array([]) # If we're in a turn maneuver or not
              # Traffic navigation information
             self.orig = []  # Four letter code of origin airport
             self.dest = []  # Four letter code of destination airport
@@ -379,6 +381,8 @@ class Autopilot(Entity, replaceable=True):
         bs.traf.selspd = np.where(inoldturn*(bs.traf.actwp.oldturnspd>0.)*bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav,
                                   bs.traf.actwp.oldturnspd,bs.traf.selspd)
 
+        # In turn indicator
+        self.inturn = np.logical_or(useturnspd, inoldturn)
 
         #debug if inoldturn[0]:
         #debug     print("inoldturn bs.traf.trk =",bs.traf.trk[0],"qdr =",qdr)
