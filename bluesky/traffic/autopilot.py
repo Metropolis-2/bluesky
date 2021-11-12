@@ -253,16 +253,6 @@ class Autopilot(Entity, replaceable=True):
         qdr, distinnm = geo.qdrdist(bs.traf.lat, bs.traf.lon,
                                     bs.traf.actwp.lat, bs.traf.actwp.lon)  # [deg][nm])
         
-        qdrturn, dist2turn = geo.qdrdist(bs.traf.lat, bs.traf.lon,
-                                        bs.traf.actwp.nextturnlat, bs.traf.actwp.nextturnlon)
-        
-        self.qdrturn = qdrturn
-        dist2turn = dist2turn * nm
-        
-        # Where we don't have a turn waypoint, as in turn idx is negative, then put distance
-        # as Earth circumference.
-        self.dist2turn = np.where(bs.traf.actwp.nextturnidx > 0, dist2turn, 40075000)
-        
         self.qdr2wp  = qdr
         self.dist2wp = distinnm*nm  # Conversion to meters
 
@@ -347,6 +337,16 @@ class Autopilot(Entity, replaceable=True):
         # t = (v1-v0)/a ; x = v0*t+1/2*a*t*t => dx = (v1*v1-v0*v0)/ (2a)
 
         dxspdconchg = distaccel(bs.traf.tas, nexttas, bs.traf.perf.axmax)
+        
+        qdrturn, dist2turn = geo.qdrdist(bs.traf.lat, bs.traf.lon,
+                                        bs.traf.actwp.nextturnlat, bs.traf.actwp.nextturnlon)
+        
+        self.qdrturn = qdrturn
+        dist2turn = dist2turn * nm
+        
+        # Where we don't have a turn waypoint, as in turn idx is negative, then put distance
+        # as Earth circumference.
+        self.dist2turn = np.where(bs.traf.actwp.nextturnidx > 0, dist2turn, 40075000)
 
         # Check also whether VNAVSPD is on, if not, SPD SEL has override for next leg
         # and same for turn logic
@@ -380,9 +380,8 @@ class Autopilot(Entity, replaceable=True):
         # Temporary override when still in old turn
         bs.traf.selspd = np.where(inoldturn*(bs.traf.actwp.oldturnspd>0.)*bs.traf.swvnavspd*bs.traf.swvnav*bs.traf.swlnav,
                                   bs.traf.actwp.oldturnspd,bs.traf.selspd)
-
-        # In turn indicator
-        self.inturn = np.logical_or(useturnspd, inoldturn)
+        
+        self.inturn = np.logical_or(useturnspd,inoldturn)
 
         #debug if inoldturn[0]:
         #debug     print("inoldturn bs.traf.trk =",bs.traf.trk[0],"qdr =",qdr)
