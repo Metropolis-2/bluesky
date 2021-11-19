@@ -30,78 +30,52 @@ class descendcheck(core.Entity):
     ''' Example new entity object for BlueSky. '''
     def __init__(self):
         super().__init__()
-        # with self.settrafarrays():
-        #     self.startDescend = np.array([], dtype=bool) # array of booleans to check if descend can start
+        with self.settrafarrays():
+            self.startDescend = np.array([], dtype=bool) # array of booleans to check if descend can start
         
-        # # update traf
-        # traf.startDescend = self.startDescend
+        # update traf
+        traf.startDescend = self.startDescend
         
 
-    # def create(self, n=1):
-    #     ''' This function gets called automatically when new aircraft are created. '''
-    #     # Don't forget to call the base class create when you reimplement this function!
-    #     super().create(n)
-    #     self.startDescend[-n:] = False
-    #     traf.startDescend = self.startDescend
+    def create(self, n=1):
+        ''' This function gets called automatically when new aircraft are created. '''
+        # Don't forget to call the base class create when you reimplement this function!
+        super().create(n)
+        self.startDescend[-n:] = False
+        traf.startDescend = self.startDescend
         
 
     # Functions that need to be called periodically can be indicated to BlueSky
     # with the timed_function decorator
-    @core.timed_function(name='descendcheck', dt=settings.asas_dt/2)
+    @core.timed_function(name='descendcheck', dt=5)
     def update(self):
         
-        for idx in range(traf.ntraf):
+        # Only aircraft that do not have tactical conflicts should descend to the destination
+        descendidxs = np.where(traf.cr.active==False)[0]
+        
+        for idx in descendidxs:
             
+            # find out the current active waypoint
             iwpid = traf.ap.route[idx].iactwp
             
-            if iwpid > -1 and traf.resostrategy[idx] =="None" and traf.cr.active[idx] == False:
+            # Proceed if the aircraft has waypoints
+            if iwpid > -1:
             
                 # Determine the lat lon of the last and the second last waypoints. the second last waypoint is the ToD
-                last_wptidx = np.argmax(traf.ap.route[idx].wpname)
-                sec_last_wptidx = last_wptidx - 1
-                # last_wpt_lat = traf.ap.route[idx].wplat[last_wptidx]
-                # last_wpt_lon = traf.ap.route[idx].wplon[last_wptidx]
+                sec_last_wptidx = traf.ap.route[idx].nwp-2
                 sec_last_wpt_lat = traf.ap.route[idx].wplat[sec_last_wptidx]
                 sec_last_wpt_lon = traf.ap.route[idx].wplon[sec_last_wptidx]
                 
                 # If all the conditions are satisfied, then use stack commands to descend this aircraft
-                if iwpid == sec_last_wptidx: 
+                if iwpid == sec_last_wptidx and self.startDescend[idx] == False:
                     
-                    # call the stacks 
+                    # call the stacks
                     stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 SPD {traf.id[idx]} 0")
                     stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
                     stack.stack(f"ATALT {traf.id[idx]} 0 DEL {traf.id[idx]}")
-            
-            
-        
-        # # determine the indexes of the drones that are allowed to descend
-        # descendidxs = np.where(list(traf.resostrategy=="None") and list(traf.cr.active == False) and list(traf.startDescend == False))[0]
-        
-        # for idx in descendidxs:
-            
-        #     # find out if the active waypoint is the second last waypoint
-        #     iwpid = traf.ap.route[idx].iactwp
-            
-        #     if iwpid > -1:
-            
-        #         # Determine the lat lon of the last and the second last waypoints. the second last waypoint is the ToD
-        #         last_wptidx = np.argmax(traf.ap.route[idx].wpname)
-        #         sec_last_wptidx = last_wptidx - 1
-        #         # last_wpt_lat = traf.ap.route[idx].wplat[last_wptidx]
-        #         # last_wpt_lon = traf.ap.route[idx].wplon[last_wptidx]
-        #         sec_last_wpt_lat = traf.ap.route[idx].wplat[sec_last_wptidx]
-        #         sec_last_wpt_lon = traf.ap.route[idx].wplon[sec_last_wptidx]
-                
-        #         # If all the conditions are satisfied, then use stack commands to descend this aircraft
-        #         if iwpid == sec_last_wptidx: 
                     
-        #             # call the stacks 
-        #             stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 SPD {traf.id[idx]} 0")
-        #             stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
-        #             stack.stack(f"ATALT {traf.id[idx]} 0 DEL {traf.id[idx]}")
-                    
-        #             # update the startDescend
-        #             self.startDescend[idx] = True
+                    # update the startDescend
+                    self.startDescend[idx] = True
         
-        # # update traf
-        # traf.startDescend = self.startDescend
+        # update traf
+        traf.startDescend = self.startDescend

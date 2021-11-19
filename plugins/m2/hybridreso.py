@@ -421,8 +421,6 @@ class hybridreso(ConflictResolution):
                     elif traf.resostrategy[idx] == "RESO9":
                         traf.ap.route[idx].wpspd[iwpid] = traf.resospd[idx]
 
-                    
-
         # Trajectory after the original conflict is finished and update intent
         for idx in np.where(self.active == False)[0]:
             # Because active is false, switch off all the asas channels
