@@ -171,7 +171,7 @@ class etaCheck(core.Entity):
         eta = self.eta[acid]
 
         diff = sta - eta
-        print(acid,diff)
+        # print(acid,diff)
         return diff
 
     def horizontal_leg(self, start_lat, start_lon, end_lat, end_lon, spd):
