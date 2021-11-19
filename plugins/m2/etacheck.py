@@ -6,7 +6,7 @@ import numpy as np
 from bluesky import core, stack, traf, sim, tools #, settings, navdb, scr, tools
 from datetime import datetime
 
-everis_sta=True
+everis_sta=False
 
 ### Initialization function of your plugin. Do not change the name of this
 ### function, as it is the way BlueSky recognises this file as a plugin.

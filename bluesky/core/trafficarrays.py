@@ -108,6 +108,7 @@ class TrafficArrays:
             child.delete(idx)
 
         for v in self._ArrVars:
+            print(v, len(self.__dict__[v]) )
             self.__dict__[v] = np.delete(self.__dict__[v], idx)
 
         if self._LstVars:
