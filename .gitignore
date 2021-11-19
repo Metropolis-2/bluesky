@@ -92,3 +92,4 @@ ssd.obj
 *-checkpoint.ipynb
 .ropeproject/config.py
 *.ini
+scenario/M2/ic.scn
