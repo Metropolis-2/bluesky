@@ -39,8 +39,9 @@ class airspaceLayer(core.Entity):
         # updated when aircraft are created or deleted in the simulation.
         
         # variable = input("Is this a experiment scenario: Y or N\n")
-        variable = 'y'
-        if variable.lower() != "y":
+        #TODO figure out which spec to use?
+        variable = 'n'
+        if variable.lower() != "n":
             # load the airspace structure for testing the resolution algorithms
             self.airspaceStructure = np.genfromtxt('plugins\\m2\\airspace structure spec.csv', delimiter=',',dtype=str, skip_header=2).T
         
