@@ -875,6 +875,10 @@ class Route(Replaceable):
         bs.traf.actwp.flyturn[acidx] = acrte.wpflyturn[wpidx]
         bs.traf.actwp.turnrad[acidx] = acrte.wpturnrad[wpidx]
         bs.traf.actwp.turnspd[acidx] = acrte.wpturnspd[wpidx]
+        
+        bs.traf.actwp.nextturnlat[acidx], bs.traf.actwp.nextturnlon[acidx], \
+        bs.traf.actwp.nextturnspd[acidx], bs.traf.actwp.nextturnrad[acidx], \
+        bs.traf.actwp.nextturnidx[acidx] = acrte.getnextturnwp()
 
         # Do calculation for VNAV
         acrte.calcfp()
@@ -1008,6 +1012,24 @@ class Route(Replaceable):
         npages = int((acrte.nwp + 6) / 7)
         if ipage + 1 < npages:
             bs.scr.cmdline("LISTRTE " + acid + "," + str(ipage + 1))
+            
+    def getnextturnwp(self):
+        """Give the next turn waypoint data."""
+        # Starting point
+        wpidx = self.iactwp
+        # Find next turn waypoint index
+        turnidx_all = where(self.wpflyturn)[0]
+        argwhere_arr = argwhere(turnidx_all>=wpidx)
+        if argwhere_arr.size == 0:
+            # No turn waypoints, return default values
+            return [0., 0., -999., -999., -999.]
+
+        trnidx = turnidx_all[argwhere(turnidx_all>=wpidx)[0]][0]
+
+
+
+        # Return the next turn waypoint info
+        return [self.wplat[trnidx], self.wplon[trnidx], self.wpturnspd[trnidx], self.wpturnrad[trnidx], trnidx]
 
     def getnextwp(self):
         """Go to next waypoint and return data"""
