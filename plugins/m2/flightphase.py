@@ -111,7 +111,26 @@ class flightphase(core.Entity):
         traf.dtlookup = self.dtlookup
         traf.dtlookdown = self.dtlookdown
         traf.speedupdate = self.speedupdate
-        
+
+    def delete(self, idx):
+        super().delete(idx)
+        # update traf
+        traf.flightphase = self.flightphase
+        traf.resostrategy = self.resostrategy
+        traf.resoidint = self.resoidint
+        traf.resoalt = self.resoalt
+        traf.resospd = self.resospd
+        traf.resovs = self.resovs
+        traf.recoveryspd = self.recoveryspd
+        traf.recoveryvs = self.recoveryvs
+        traf.resoHdgActive = self.resoHdgActive
+        traf.resoTasActive = self.resoTasActive
+        traf.resoAltActive = self.resoAltActive
+        traf.resoVsActive = self.resoVsActive
+        traf.preresoroute = self.preresoroute
+        traf.dtlookup = self.dtlookup
+        traf.dtlookdown = self.dtlookdown
+        traf.speedupdate = self.speedupdate
 
     @core.timed_function(name='flightphase', dt=settings.asas_dt/2)
     def update(self):

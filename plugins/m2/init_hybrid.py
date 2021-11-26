@@ -32,6 +32,6 @@ class init_hybrid(core.Entity):
         # that hold per-aircraft data. This way, their size is automatically
         # updated when aircraft are created or deleted in the simulation.
         stack.stack("ASAS HYBRIDCD")
-        stack.stack("RESO HYBRIDRESO")
+        # stack.stack("RESO HYBRIDRESO")
         stack.stack("SYMBOL")
         

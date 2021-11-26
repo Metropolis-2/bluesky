@@ -42,11 +42,11 @@ class airspaceLayer(core.Entity):
         variable = 'n'
         if variable.lower() != "y":
             # load the airspace structure for testing the resolution algorithms
-            self.airspaceStructure = np.genfromtxt('plugins\\m2\\airspace structure spec.csv', delimiter=',',dtype=str, skip_header=2).T
+            self.airspaceStructure = np.genfromtxt('plugins/m2/airspace structure spec.csv', delimiter=',',dtype=str, skip_header=2).T
         
         else:
             # load the airspace structure for the Metropolis 2 experiment
-            self.airspaceStructure = np.genfromtxt('plugins\\m2\\airspace structure spec experiment.csv', delimiter=',',dtype=str, skip_header=3).T
+            self.airspaceStructure = np.genfromtxt('plugins/m2/airspace structure spec experiment.csv', delimiter=',',dtype=str, skip_header=3).T
         
         # Process airspace structure and convert to SI units
         self.loweralt = self.airspaceStructure[2].astype(float)*ft  # [m]
