@@ -31,7 +31,9 @@ class init_hybrid(core.Entity):
         # All classes deriving from Entity can register lists and numpy arrays
         # that hold per-aircraft data. This way, their size is automatically
         # updated when aircraft are created or deleted in the simulation.
+
         stack.stack("ASAS HYBRIDCD")
         stack.stack("RESO HYBRIDRESOLUTION")
         stack.stack("SYMBOL")
         
+

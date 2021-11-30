@@ -47,6 +47,7 @@ class descendcheck(core.Entity):
 
     # Functions that need to be called periodically can be indicated to BlueSky
     # with the timed_function decorator
+
     @core.timed_function(name='descendcheck', dt=5)
     def update(self):
         
@@ -76,6 +77,7 @@ class descendcheck(core.Entity):
                     
                     # update the startDescend
                     self.startDescend[idx] = True
+
         
         # update traf
         traf.startDescend = self.startDescend

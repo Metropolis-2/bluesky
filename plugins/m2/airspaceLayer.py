@@ -85,7 +85,6 @@ class airspaceLayer(core.Entity):
         
         # determine the index of the layer each aircraft is in
         idx = np.where(comparelower & compareupper)[1]
-        
         self.airspacelayertype = self.layernames[idx]
         
         # update the traffic variable
