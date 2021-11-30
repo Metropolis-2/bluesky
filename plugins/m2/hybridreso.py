@@ -349,14 +349,18 @@ class hybridreso(ConflictResolution):
                         reso67probe = conflictProbe(ownship, intruder, idx1, dtlook=traf.dtlookdown[idx1], targetVs=traf.perf.vsmin[idx1])
                     if not reso67probe:
                         past_cpa = True
+                        
+                # If both aircraft are hovering, then its neessary to force them to continue to solve the conflict
+                if traf.gs[idx1] == 0 and traf.gs[idx2] == 0 and traf.vs[idx1] == 0 and traf.vs[idx2] == 0:
 
-                if traf.gs[idx1] == 0 and traf.gs[idx2] == 0:
                     past_cpa = True
                     
             # Start recovery for ownship if intruder is deleted, or if past CPA
             # and not in horizontal LOS or a bouncing conflict. New: check idx1Resolves
 #            if idx2 >= 0 and (not past_cpa or (distnotok and ver_los)) and idx1Resolves and not swlos :
-            if idx2 >= 0 and (not past_cpa or (distnotok and ver_los)):# and not swlos:
+
+            if idx2 >= 0 and (not past_cpa or (distnotok and ver_los)): # and not swlos:
+
                 # Enable ASAS for this aircraft
                 changeactive[idx1] = True
             else:
@@ -420,7 +424,6 @@ class hybridreso(ConflictResolution):
                     elif traf.resostrategy[idx] == "RESO9":
                         traf.ap.route[idx].wpspd[iwpid] = traf.resospd[idx]
 
-                    
 
         # Trajectory after the original conflict is finished and update intent
         for idx in np.where(self.active == False)[0]:
@@ -433,7 +436,9 @@ class hybridreso(ConflictResolution):
             # Waypoint recovery after conflict: Find the next active waypoint
             # and send the aircraft to that waypoint, but only if conflict probe is False. 
             iwpid = traf.ap.route[idx].findact(idx)
-            if iwpid > -1:  # To avoid problems if there are no waypoints
+       
+            if iwpid > -1 and traf.resostrategy[idx] != "None":  # To avoid problems if there are no waypoints
+
                 # Get the max and min vertical speed of ownship (needed for conflict probe)
                 vsMinOwn = traf.perf.vsmin[idx]
                 vsMaxOwn = traf.perf.vsmax[idx]
