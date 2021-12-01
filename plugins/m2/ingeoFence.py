@@ -7,7 +7,7 @@ from bluesky import core, stack, traf, tools, settings
 
 geofences = tools.areafilter.basic_shapes
 geofence_names = geofences.keys()
-
+#TODO ignore if current location or last waypoint is in a geofence.
 
 def init_plugin():
     ingeofence = ingeoFence()
@@ -76,6 +76,9 @@ class ingeoFence(core.Entity):
         #check for intersect between route and multipolygon
 
         val = route.intersects(multiGeofence)
+
+        if val:
+            stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
 
         return val
 

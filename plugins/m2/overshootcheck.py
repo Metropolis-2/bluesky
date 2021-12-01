@@ -55,7 +55,7 @@ class overshootCheck(core.Entity):
             self.overshot[idx] = val
 
         traf.overshot = self.overshot
-
+        traf.wptdist = self.wptdist
 
     def calc_dist(self, acid: 'acid'):
         ownship = traf
@@ -101,8 +101,8 @@ class overshootCheck(core.Entity):
     def checker(self, acid: 'acid', dist):
         if dist is not None and dist > self.wptdist[acid]:
             val = True
-            #TODO Trigger replanning function if True!
-            #TODO reset the wptdist value back to 99999 after replanning else replanning will be still be triggered after replanning
+            stack.stack(f'REROUTEOVERSHOOT {traf.id[acid]}')
+            self.wptdist[acid] = 99999
         #if distance is calculated and thus the last waypoint is active, set the val still to false and also update the dist in the wptdist array
         elif dist is not None:
             val = False
@@ -114,7 +114,7 @@ class overshootCheck(core.Entity):
 
     @stack.command
     def echoacovershot(self, acid: 'acid'):
-        ''' Print the if an acid is in conflict with a geofence '''
+        ''' Print the if an acid is has overshot or not '''
         overshot = self.getacovershot(acid)
         if overshot:
             return True, f'{traf.id[acid]} has overshot.'
