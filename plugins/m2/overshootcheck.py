@@ -45,7 +45,7 @@ class overshootCheck(core.Entity):
 
         traf.wptdist=self.wptdist
 
-    @core.timed_function(name='overshotcheck', dt=5)
+    @core.timed_function(name='overshotcheck', dt=0.5)
     def update(self):
         #import active flightplans
         for i in traf.id:
@@ -69,7 +69,7 @@ class overshootCheck(core.Entity):
         try:
             #get the index of the last waypoint
             last_wptidx = np.argmax(ac_route.wpname)
-            sec_last_wptidx = last_wptidx - 1
+            sec_last_wptidx = last_wptidx# - 1
             last_wpt_lat = ac_route.wplat[last_wptidx]
             last_wpt_lon = ac_route.wplon[last_wptidx]
             sec_last_wpt_lat = ac_route.wplat[sec_last_wptidx]

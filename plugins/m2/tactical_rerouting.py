@@ -108,15 +108,24 @@ class tactical_reroute(core.Entity):
         except:
             new_fpgs = 12.8611 / kts #if drone type is not found default to 25 kts
 
+        if ownship.alt[acid] /ft != new_fpalt:
+            stack.stack(f'DELRTE {ownship.id[acid]}')
+            stack.stack(f'SPD {ownship.id[acid]} 0')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
+            for i in list(zip(new_fplat,new_fplon)):
+                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
+        else:
+            stack.stack(f'DELRTE {ownship.id[acid]}')
+            stack.stack(f'SPD {ownship.id[acid]} 0')
+            for i in list(zip(new_fplat,new_fplon)):
+                stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
 
-        stack.stack(f'DELRTE {ownship.id[acid]}')
-        stack.stack(f'SPD {ownship.id[acid]} 0')
-        stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-        for i in list(zip(new_fplat,new_fplon)):
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
         return True, f'OVERSHOT - {traf.id[acid]} has a new route'
 
     @stack.command
@@ -143,13 +152,22 @@ class tactical_reroute(core.Entity):
             new_fpgs = 12.8611 / kts #if drone type is not found default to 25 kts
 
         #TODO figure out how to do turnspeeds.
+        if ownship.alt[acid] /ft != new_fpalt:
+            stack.stack(f'DELRTE {ownship.id[acid]}')
+            stack.stack(f'SPD {ownship.id[acid]} 0')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
+            for i in list(zip(new_fplat,new_fplon)):
+                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
+        else:
+            stack.stack(f'DELRTE {ownship.id[acid]}')
+            stack.stack(f'SPD {ownship.id[acid]} 0')
+            for i in list(zip(new_fplat,new_fplon)):
+                stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
 
-        stack.stack(f'DELRTE {ownship.id[acid]}')
-        stack.stack(f'SPD {ownship.id[acid]} 0')
-        stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-        for i in list(zip(new_fplat,new_fplon)):
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
-        stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
         return True, f'GEOFENCE - {traf.id[acid]} has a new route'
