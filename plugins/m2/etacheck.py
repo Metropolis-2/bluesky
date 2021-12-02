@@ -197,7 +197,7 @@ class etaCheck(core.Entity):
 
     @stack.command
     def setsta(self, acid: 'acid',time):
-        date_time = datetime.fromtimestamp(int(time)).strftime("%Y-%M-%d, %H:%M:%S")
+        date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+time)).strftime("%Y-%M-%d, %H:%M:%S")
         self.sta[acid] = sta(int(time),str(date_time))
         traf.sta=self.sta
         return True, f'{traf.id[acid]} STA is set to {date_time}'
