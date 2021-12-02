@@ -65,21 +65,24 @@ class ingeoFence(core.Entity):
 
         routecoords = [(ac_lon,ac_lat)]
         routecoords.extend(list(zip(acroute.wplon[iactwp:],acroute.wplat[iactwp:])))
-        route = LineString(routecoords)
+        if len(routecoords) > 1:
 
-        #construct the multipolygon object from all the polygons
-        #this way you only have to check each aircraft against one shapely object instead of when each geofence in its own.
-        #Buffer is used here to account for errors when having overlapping polygons, why does this work?
-        #source https://stackoverflow.com/questions/63955752/topologicalerror-the-operation-geosintersection-r-could-not-be-performed
-        multiGeofence = MultiPolygon(multiGeofence).buffer(0)
+            route = LineString(routecoords)
 
-        #check for intersect between route and multipolygon
+            #construct the multipolygon object from all the polygons
+            #this way you only have to check each aircraft against one shapely object instead of when each geofence in its own.
+            #Buffer is used here to account for errors when having overlapping polygons, why does this work?
+            #source https://stackoverflow.com/questions/63955752/topologicalerror-the-operation-geosintersection-r-could-not-be-performed
+            multiGeofence = MultiPolygon(multiGeofence).buffer(0)
 
-        val = route.intersects(multiGeofence)
+            #check for intersect between route and multipolygon
 
-        if val:
-            stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
+            val = route.intersects(multiGeofence)
 
+            if val:
+                stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
+        else:
+            val = False
         return val
 
     @stack.command
