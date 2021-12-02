@@ -51,9 +51,8 @@ def read_graph(gpkg):
 #TODO 30 second loading time with 5 layers, maybe we can use pooling for loading?
 graphs_dict={}
 for i in graphs:
-    j=i.rstrip(".gpkg")
-    j='_'.join(j.split('_')[:-1])
-    graphs_dict[j] = read_graph(GRAPH_LOCATION+'\\'+i)
+    i=i.rstrip(".gpkg")
+    graphs_dict[i] = read_graph(GRAPH_LOCATION+'\\'+i)
 
 #load aircraft data
 aircraft = json.load(open(AIRCRAFT_LOCATION))
@@ -97,12 +96,13 @@ class tactical_reroute(core.Entity):
 
         initial_point = (ownship.lat[acid],ownship.lon[acid])
         final_point = (ownship_route.wplat[last_wpidx], ownship_route.wplon[last_wpidx])
-        new_nodeids = shortest_path(graphs_dict['Resolution_Layer_0']['graph'],initial_point,final_point,True)
+        new_nodeids = shortest_path(graphs_dict['multi']['graph'],initial_point,final_point,True)
 
-        new_fplat = graphs_dict['Resolution_Layer_0']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
-        new_fplon = graphs_dict['Resolution_Layer_0']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
-        new_fpalt = ownship.layerUpperAlt[np.where(ownship.layernames=='reso_0')[0][0]] / ft
+        new_fplat = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
+        new_fplon = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
+        new_fpalt = 0 # going standard to 0 because overshoot standards reroutes in layer 0
         ownship_type = ownship.type[acid]
+
         try:
             new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts #TODO make sure TUD updates with cruise speeds as per emmanuel request
         except:
@@ -144,7 +144,7 @@ class tactical_reroute(core.Entity):
 
         new_fplat = graphs_dict[rerouteLayer]['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
         new_fplon = graphs_dict[rerouteLayer]['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
-        new_fpalt = ownship.layerUpperAlt[np.where(ownship.layernames==f'resolution_{currentLayernumber}')[0][0]] / ft
+        new_fpalt = ownship.layerLowerAlt[np.where(ownship.layernames==f'resolution_{currentLayernumber}')[0][0]] / ft
         ownship_type = ownship.type[acid]
         try:
             new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts #TODO make sure TUD updates with cruise speeds as per emmanuel request
