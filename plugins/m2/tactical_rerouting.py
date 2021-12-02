@@ -135,7 +135,7 @@ class tactical_reroute(core.Entity):
 
         new_fplat = graphs_dict[rerouteLayer]['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
         new_fplon = graphs_dict[rerouteLayer]['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
-        new_fpalt = ownship.layerUpperAlt[np.where(ownship.layernames=='reso_0')[0][0]] / ft
+        new_fpalt = ownship.layerUpperAlt[np.where(ownship.layernames==f'resolution_{currentLayernumber}')[0][0]] / ft
         ownship_type = ownship.type[acid]
         try:
             new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts #TODO make sure TUD updates with cruise speeds as per emmanuel request
