@@ -33,17 +33,12 @@ class overshootCheck(core.Entity):
             self.overshot = np.array([], dtype=bool)
             self.wptdist = np.array([])
 
-        traf.wptdist=self.wptdist
-        traf.overshot = self.overshot
-
     def create(self, n=1):
         ''' This function gets called automatically when new aircraft are created. '''
         # Don't forget to call the base class create when you reimplement this function!
         super().create(n)
         # set the initial distance very high so the checker wont trigger when the last waypoint is incidentally very far away
         self.wptdist[-n:] = 99999
-
-        traf.wptdist=self.wptdist
 
     @core.timed_function(name='overshotcheck', dt=5)
     def update(self):
@@ -53,9 +48,6 @@ class overshootCheck(core.Entity):
             dist = self.calc_dist(idx)
             val = self.checker(idx, dist)
             self.overshot[idx] = val
-
-        traf.overshot = self.overshot
-        traf.wptdist = self.wptdist
 
     def calc_dist(self, acid: 'acid'):
         ownship = traf
@@ -107,7 +99,6 @@ class overshootCheck(core.Entity):
         elif dist is not None:
             val = False
             self.wptdist[acid] = dist
-            traf.wptdist = self.wptdist
         elif dist is None:
             val = False
         return val

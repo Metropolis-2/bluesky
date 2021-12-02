@@ -53,9 +53,21 @@ class etaCheck(core.Entity):
         # After base creation we can change the values in our own states for the new aircraft
         self.orignwp[-n:] = 0
         self.sta[-n:] = 0
+        self.eta[-n:] = 0
+        self.delayed[-n:] = False
 
         traf.orignwp = self.orignwp
         traf.sta = self.sta
+        traf.eta = self.eta
+        traf.delayed = self.delayed
+
+    def delete(self, idx):
+        super().delete(idx)
+        # update traf
+        traf.orignwp = self.orignwp
+        traf.sta = self.sta
+        traf.eta = self.eta
+        traf.delayed = self.delayed
 
     @core.timed_function(name='update_eta', dt=5)
     def update(self):

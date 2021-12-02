@@ -42,7 +42,11 @@ class priority(core.Entity):
         super().create(n)
         self.priority[-n:] = 1
         traf.priority = self.priority
-        
+
+    def delete(self, idx):
+        super().delete(idx)
+        # update traf
+        traf.priority = self.priority
         
     @stack.command
     def setpriority(self, acid: 'acid', prio):

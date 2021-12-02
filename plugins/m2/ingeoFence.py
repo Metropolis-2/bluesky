@@ -29,8 +29,6 @@ class ingeoFence(core.Entity):
         with self.settrafarrays():
             self.ingeofence = np.array([],dtype=bool)
 
-        traf.ingeofence = self.ingeofence
-
     @core.timed_function(name='ingeofence', dt=settings.asas_dt)
     def update(self):
         #check for each aircraft if it interferes with one of the geofences
@@ -38,9 +36,6 @@ class ingeoFence(core.Entity):
             idx=traf.id2idx(i)
             val = self.checker(acid=idx)
             self.ingeofence[idx] = val
-
-        # set the self to the traf so it can be used by other plugins
-        traf.ingeofence = self.ingeofence
 
     def checker(self, acid: 'acid'):
         multiGeofence = []
