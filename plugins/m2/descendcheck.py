@@ -43,6 +43,11 @@ class descendcheck(core.Entity):
         super().create(n)
         self.startDescend[-n:] = False
         traf.startDescend = self.startDescend
+
+    def delete(self, idx):
+        super().delete(idx)
+        # update traf
+        traf.startDescend = self.startDescend
         
 
     # Functions that need to be called periodically can be indicated to BlueSky
@@ -71,8 +76,8 @@ class descendcheck(core.Entity):
                 if iwpid == sec_last_wptidx and self.startDescend[idx] == False:
                     
                     # call the stacks
-                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 SPD {traf.id[idx]} 0")
-                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0215982 ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
+                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0115982 SPD {traf.id[idx]} 0")
+                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0115982 ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
                     stack.stack(f"ATALT {traf.id[idx]} 0 DEL {traf.id[idx]}")
                     
                     # update the startDescend
