@@ -2,10 +2,13 @@
     in BlueSky as the description of your plugin. """
 from random import randint
 import numpy as np
-from shapely.geometry import Polygon, MultiPolygon, LineString
+from shapely.geometry import Polygon, MultiPolygon, LineString,Point
 from bluesky import core, stack, traf, tools, settings
 
+
+
 geofences = tools.areafilter.basic_shapes
+#geo_save_dict =
 geofence_names = geofences.keys()
 #TODO ignore if current location or last waypoint is in a geofence.
 
@@ -28,14 +31,23 @@ class ingeoFence(core.Entity):
         super().__init__()
         with self.settrafarrays():
             self.ingeofence = np.array([],dtype=bool)
+            self.acingeofence = np.array([], dtype=bool)
+
+        traf.ingeofence = self.ingeofence
+        traf.acingeofence = self.acingeofence
 
     @core.timed_function(name='ingeofence', dt=settings.asas_dt)
     def update(self):
         #check for each aircraft if it interferes with one of the geofences
         for i in traf.id:
             idx=traf.id2idx(i)
-            val = self.checker(acid=idx)
-            self.ingeofence[idx] = val
+            routeval, acval = self.checker(acid=idx)
+
+            self.ingeofence[idx] = routeval
+            self.acingeofence[idx] = acval
+
+            traf.ingeofence = self.ingeofence
+            traf.acingeofence = self.acingeofence
 
     def checker(self, acid: 'acid'):
         multiGeofence = []
@@ -60,25 +72,31 @@ class ingeoFence(core.Entity):
 
         routecoords = [(ac_lon,ac_lat)]
         routecoords.extend(list(zip(acroute.wplon[iactwp:],acroute.wplat[iactwp:])))
+
+        # construct the multipolygon object from all the polygons
+        # this way you only have to check each aircraft against one shapely object instead of when each geofence in its own.
+        # Buffer is used here to account for errors when having overlapping polygons, why does this work?
+        # source https://stackoverflow.com/questions/63955752/topologicalerror-the-operation-geosintersection-r-could-not-be-performed
+        multiGeofence = MultiPolygon(multiGeofence).buffer(0)
+
         if len(routecoords) > 1:
-
             route = LineString(routecoords)
-
-            #construct the multipolygon object from all the polygons
-            #this way you only have to check each aircraft against one shapely object instead of when each geofence in its own.
-            #Buffer is used here to account for errors when having overlapping polygons, why does this work?
-            #source https://stackoverflow.com/questions/63955752/topologicalerror-the-operation-geosintersection-r-could-not-be-performed
-            multiGeofence = MultiPolygon(multiGeofence).buffer(0)
-
             #check for intersect between route and multipolygon
-
-            val = route.intersects(multiGeofence)
-
-            if val:
-                stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
+            routeval = route.intersects(multiGeofence)
         else:
-            val = False
-        return val
+            routeval = False
+
+        acval = multiGeofence.contains((Point(ac_lon, ac_lat)))
+        destval = multiGeofence.contains((Point(routecoords[-1])))
+
+        if acval:
+            print(f'{acid} stuck in geofence')
+        if destval:
+            print(f'{acid} destination stuck in geofence')
+        if routeval and not acval and not destval:
+            stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
+
+        return routeval, acval
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):

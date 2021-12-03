@@ -6,7 +6,7 @@ import numpy as np
 from bluesky import core, stack, traf, sim, tools #, settings, navdb, scr, tools
 from datetime import datetime
 
-everis_sta=False
+everis_sta=True
 
 ### Initialization function of your plugin. Do not change the name of this
 ### function, as it is the way BlueSky recognises this file as a plugin.
@@ -27,10 +27,9 @@ def init_plugin():
     return config
 
 class sta:
-    def __init__(self, time, utctime,reroute=False):
+    def __init__(self, time, utctime):
         self.time = time  # integer
         self.utctime = utctime
-        self.reroute = reroute# datetime
 
 class etaCheck(core.Entity):
     ''' Example new entity object for BlueSky. '''
@@ -180,8 +179,7 @@ class etaCheck(core.Entity):
             sta = self.sta[acid].time
         if not everis_sta:
             sta = self.sta[acid]
-        eta = self.eta[acid]
-
+        eta=self.eta[acid]
         diff = sta - eta
         # print(acid,diff)
         return diff
@@ -209,7 +207,7 @@ class etaCheck(core.Entity):
 
     @stack.command
     def setsta(self, acid: 'acid',time):
-        date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+time)).strftime("%Y-%M-%d, %H:%M:%S")
+        date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+int(time))).strftime("%Y-%M-%d, %H:%M:%S")
         self.sta[acid] = sta(int(time),str(date_time))
         traf.sta=self.sta
         return True, f'{traf.id[acid]} STA is set to {date_time}'

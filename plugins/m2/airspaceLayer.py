@@ -39,7 +39,7 @@ class airspaceLayer(core.Entity):
         # updated when aircraft are created or deleted in the simulation.
         
         # variable = input("Is this a experiment scenario: Y or N\n")
-        variable = 'n'
+        variable = 'y'
         if variable.lower() != "y":
             # load the airspace structure for testing the resolution algorithms
             self.airspaceStructure = np.genfromtxt('plugins/m2/airspace structure spec.csv', delimiter=',',dtype=str, skip_header=2).T
@@ -58,7 +58,7 @@ class airspaceLayer(core.Entity):
         if variable.lower() != 'n':
             self.layerdirection = self.airspaceStructure[6]
             traf.layerdirection = self.layerdirection
-        
+
         # add the airspacelayertype as new array per aircraft
         with self.settrafarrays():
             self.airspacelayertype = np.array([],dtype='S24')

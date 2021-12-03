@@ -1,7 +1,7 @@
 # id, type, startalt[ft], endalt[ft], minspd[kts], maxspd[kts], direction
 # Note: resolution_0 is the lowest reso layer and the only reso layer without direction
 # Note: for the code in airspacelayer plugin to work correctly, it is necessary to define outside_lower and outside_upper
-0,outside_lower,-10000,30,0.0,999,none
+0,outside_lower,-10000,30,0.0,999,normal
 1,reso_0,30,60,0.0,999,multi
 2,emergency_cruising,60,90,0.0,999,normal
 3,emergency_resolution,90,120,0.0,999,normal
@@ -17,4 +17,4 @@
 13,resolution_5,390,420,0.0,999,inverted
 14,cruising_6,420,450,25,35,normal
 15,resolution_6,450,480,0.0,999,normal
-16,outside_upper,480,10000,0.0,999,none
+16,outside_upper,480,10000,0.0,999,normal
