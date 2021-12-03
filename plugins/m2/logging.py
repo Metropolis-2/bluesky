@@ -74,6 +74,7 @@ class logging(core.Entity):
             self.loslog.start()
             self.start = True
 
+
         list_pf = ['cruising/hovering', 'climbing', 'descending']
 
         # Store statistics for all new conflict pairs
@@ -96,6 +97,6 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1]], ac2[i], list_pf[traf.flightphase[idx2]])
+                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], ac2[i], list_pf[traf.flightphase[idx2][0]])
         self.prevlospairs = set(traf.cd.lospairs)
 
