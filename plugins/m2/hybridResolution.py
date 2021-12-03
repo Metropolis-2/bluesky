@@ -333,10 +333,7 @@ class hybridResolution(ConflictResolution):
         # Trajectory after the original conflict is finished and update intent
         for idx in np.where(self.active == False)[0]:
             # Because active is false, switch off all the asas channels
-            traf.cr.hdgactive[idx] = False
-            traf.cr.tasactive[idx] = False
-            traf.cr.altactive[idx] = False
-            traf.cr.vsactive[idx] = False
+
 
             # Waypoint recovery after conflict: Find the next active waypoint
             # and send the aircraft to that waypoint, but only if conflict probe is False.
@@ -355,6 +352,10 @@ class hybridResolution(ConflictResolution):
                     if not conflictProbe(ownship, intruder, idx, dtlook=traf.dtlookdown[idx],
                                          targetVs=traf.perf.vsmin[idx]):
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
                         stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
                         stack.stack(
@@ -371,6 +372,10 @@ class hybridResolution(ConflictResolution):
                     # if it is safe to resmue the original speed, go for it!
                     if not conflictProbe(ownship, intruder, idx, targetGs=traf.recoveryspd[idx]):
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
                         stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
                         stack.stack(
@@ -391,6 +396,10 @@ class hybridResolution(ConflictResolution):
                     # if it is safe to resume climb/descend, then resume climb/descend!
                     if not reso3probe:
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
                         stack.stack(
                             f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
@@ -411,6 +420,10 @@ class hybridResolution(ConflictResolution):
                                                                                                 traf.recoveryspd[idx])
                     if not reso5probe:
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
                         stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
                         stack.stack(
@@ -431,6 +444,10 @@ class hybridResolution(ConflictResolution):
                         reso8probe = conflictProbe(ownship, intruder, idx, dtlook=dtlookdown, targetVs=vsMinOwn)
                     if not reso8probe:
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         traf.ap.vs[idx] = traf.recoveryvs[idx]
                     else:
                         traf.ap.vs[idx] = traf.resovs[idx]
@@ -438,6 +455,10 @@ class hybridResolution(ConflictResolution):
                 elif traf.resostrategy[idx] == "RESO9":
                     if not conflictProbe(ownship, intruder, idx, targetGs=traf.recoveryspd[idx]):
                         traf.resostrategy[idx] = "None"
+                        traf.cr.hdgactive[idx] = False
+                        traf.cr.tasactive[idx] = False
+                        traf.cr.altactive[idx] = False
+                        traf.cr.vsactive[idx] = False
                         stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
                         stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
                         stack.stack(
@@ -447,10 +468,18 @@ class hybridResolution(ConflictResolution):
 
                 else:
                     traf.resostrategy[idx] = "None"
+                    traf.cr.hdgactive[idx] = False
+                    traf.cr.tasactive[idx] = False
+                    traf.cr.altactive[idx] = False
+                    traf.cr.vsactive[idx] = False
 
             # no waypoints
             else:
                 traf.resostrategy[idx] = "None"
+                traf.cr.hdgactive[idx] = False
+                traf.cr.tasactive[idx] = False
+                traf.cr.altactive[idx] = False
+                traf.cr.vsactive[idx] = False
 
     # The four functions below control the four asas channels. These
     @property

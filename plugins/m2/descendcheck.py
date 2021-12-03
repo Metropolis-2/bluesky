@@ -76,9 +76,9 @@ class descendcheck(core.Entity):
                 if iwpid == sec_last_wptidx and self.startDescend[idx] == False:
                     
                     # call the stacks
-                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0115982 SPD {traf.id[idx]} 0")
-                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.0115982 ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
-                    stack.stack(f"ATALT {traf.id[idx]} 0 DEL {traf.id[idx]}")
+                    stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.1115982 SPD {traf.id[idx]} 0")
+                    stack.stack(f"ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} -5")
+                    stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
                     
                     # update the startDescend
                     self.startDescend[idx] = True

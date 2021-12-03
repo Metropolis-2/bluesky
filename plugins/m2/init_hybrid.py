@@ -31,9 +31,19 @@ class init_hybrid(core.Entity):
         # All classes deriving from Entity can register lists and numpy arrays
         # that hold per-aircraft data. This way, their size is automatically
         # updated when aircraft are created or deleted in the simulation.
+        self.start = False
 
-        stack.stack("ASAS HYBRIDCD")
-        stack.stack("RESO HYBRIDRESOLUTION")
-        stack.stack("SYMBOL")
-        
+    @core.timed_function(name='init_hybrid', dt=0.5)
+    def update(self):
+        if self.start == False:
+            stack.stack("ASAS HYBRIDCD")
+            stack.stack("RESO HYBRIDRESOLUTION")
+            stack.stack("SYMBOL")
+            stack.stack("casmachthr 0")
+            stack.stack("PCALL STREETS")
+            self.start = True
+
+    def reset(self):
+        ''' Reset area state when simulation is reset. '''
+        self.start = False
 
