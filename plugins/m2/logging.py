@@ -4,7 +4,6 @@ import numpy as np
 # Import the global bluesky objects. Uncomment the ones you need
 from bluesky import core, traf, stack, sim #, core #, settings, navdb,  scr, tools
 from bluesky.tools import datalog
-
 conheader = \
     '#######################################################\n' + \
     'CONF LOG\n' + \
@@ -13,7 +12,10 @@ conheader = \
     'Parameters [Units]:\n' + \
     'Simulation time [s], ' + \
     'AC1 [-], ' + \
-    'AC2 [-]\n'
+    'flightphase AC1 [-], ' + \
+    'AC2 [-], ' + \
+    'flightphase AC2 [-]\n'
+
 
 losheader = \
     '#######################################################\n' + \
@@ -23,7 +25,9 @@ losheader = \
     'Parameters [Units]:\n' + \
     'Simulation time [s], ' + \
     'AC1 [-], ' + \
-    'AC2 [-]\n'
+    'flightphase AC1 [-], ' + \
+    'AC2 [-], ' + \
+    'flightphase AC2 [-]\n'
 
 
 def init_plugin():
@@ -70,6 +74,8 @@ class logging(core.Entity):
             self.loslog.start()
             self.start = True
 
+        list_pf = ['cruising/hovering', 'climbing', 'descending']
+
         # Store statistics for all new conflict pairs
         # Conflict pairs detected in the current timestep that were not yet
         # present in the previous timestep
@@ -77,15 +83,19 @@ class logging(core.Entity):
         if confpairs_new:
             newconf_unique = {frozenset(pair) for pair in confpairs_new}
             ac1, ac2 = zip(*newconf_unique)
+            idx1 = traf.id2idx(ac1)
+            idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.hybridlog.log(ac1[i], ac2[i])
+                self.hybridlog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], ac2[i], list_pf[traf.flightphase[idx2][0]])
         self.prevconfpairs = set(traf.cd.confpairs)
 
         lospairs_new = list(set(traf.cd.lospairs) - self.prevlospairs)
         if lospairs_new:
             newlos_unique = {frozenset(pair) for pair in lospairs_new}
             ac1, ac2 = zip(*newlos_unique)
+            idx1 = traf.id2idx(ac1)
+            idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.loslog.log(ac1[i], ac2[i])
+                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1]], ac2[i], list_pf[traf.flightphase[idx2]])
         self.prevlospairs = set(traf.cd.lospairs)
 
