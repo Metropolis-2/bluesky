@@ -356,12 +356,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
-                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
                     else:
                         # keep flying the resolution altitude
                         traf.ap.alt[idx] = traf.resoalt[idx]
@@ -376,12 +370,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
-                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
-                        stack.stack(
-                            f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts} VNAV {traf.id[idx]} ON")
-                        stack.stack(
-                            f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts} LNAV {traf.id[idx]} ON")
 
                 elif traf.resostrategy[idx] == "RESO3" or traf.resostrategy[idx] == "RESO6" or traf.resostrategy[
                     idx] == "RESO7":
@@ -400,11 +388,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                     else:
                         # keep hovering
                         traf.ap.vs[idx] = traf.resovs[idx]
@@ -424,14 +407,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
-                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
-                        stack.stack(
-                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
-                        # stack.stack(f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid]/kts} VNAV {traf.id[idx]} ON")
-                        # stack.stack(f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid]/kts} LNAV {traf.id[idx]} ON")
                     else:
                         # keep flying the resolution altitude
                         traf.ap.alt[idx] = traf.resoalt[idx]
@@ -448,7 +423,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        traf.ap.vs[idx] = traf.recoveryvs[idx]
                     else:
                         traf.ap.vs[idx] = traf.resovs[idx]
 
@@ -459,13 +433,6 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
-                        stack.stack(f"SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts}")
-                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
-                        stack.stack(
-                            f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts} VNAV {traf.id[idx]} ON")
-                        stack.stack(
-                            f"ATSPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iwpid] / kts} LNAV {traf.id[idx]} ON")
-
                 else:
                     traf.resostrategy[idx] = "None"
                     traf.cr.hdgactive[idx] = False
