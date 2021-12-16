@@ -210,4 +210,4 @@ class etaCheck(core.Entity):
         date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+int(time))).strftime("%Y-%M-%d, %H:%M:%S")
         self.sta[acid] = sta(int(time),str(date_time))
         traf.sta=self.sta
-        return True, f'{traf.id[acid]} STA is set to {date_time}'
+        return True, f'{traf.id[acid]} STA is set to {tools.misc.tim2txt(int(time)+sim.simt)}'

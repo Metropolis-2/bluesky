@@ -13,8 +13,10 @@ conheader = \
     'Simulation time [s], ' + \
     'AC1 [-], ' + \
     'flightphase AC1 [-], ' + \
+    'resolution strategy AC1 [-], ' + \
     'AC2 [-], ' + \
-    'flightphase AC2 [-]\n'
+    'flightphase AC2 [-]' + \
+    'resolution strategy AC2 [-]\n'
 
 
 losheader = \
@@ -74,6 +76,7 @@ class logging(core.Entity):
             self.loslog.start()
             self.start = True
 
+
         list_pf = ['cruising/hovering', 'climbing', 'descending']
 
         # Store statistics for all new conflict pairs
@@ -86,7 +89,7 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.hybridlog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], ac2[i], list_pf[traf.flightphase[idx2][0]])
+                self.hybridlog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], traf.resostrategy[idx1], ac2[i], list_pf[traf.flightphase[idx2][0]], traf.resostrategy[idx2])
         self.prevconfpairs = set(traf.cd.confpairs)
 
         lospairs_new = list(set(traf.cd.lospairs) - self.prevlospairs)
@@ -96,6 +99,6 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1]], ac2[i], list_pf[traf.flightphase[idx2]])
+                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], ac2[i], list_pf[traf.flightphase[idx2][0]])
         self.prevlospairs = set(traf.cd.lospairs)
 

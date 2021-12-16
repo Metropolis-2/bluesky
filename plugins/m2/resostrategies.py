@@ -1,6 +1,7 @@
 import numpy as np
 
 from bluesky import traf  # , stack #, core #, settings, navdb, sim, scr, tools
+from bluesky.tools.aero import nm, ft, kts, fpm
 
 
 def reso1(idxown):
@@ -51,8 +52,8 @@ def reso2(idxown, idxint, limitspeed=True):
 
     # the current velocity ground speed vector of ownship and intruder
     # needed for velocity matching
-    ownvector = np.array([traf.gseast[idxown]], traf.gsnorth[idxown])
-    intvector = np.array([traf.gseast[idxint]], traf.gsnorth[idxint])
+    ownvector = np.array([traf.gseast[idxown], traf.gsnorth[idxown]])
+    intvector = np.array([traf.gseast[idxint], traf.gsnorth[idxint]])
 
     # save the current ownship spd for recovery after conflict
     traf.recoveryspd[idxown] = traf.ap.tas[idxown]
