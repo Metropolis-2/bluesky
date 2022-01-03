@@ -3,6 +3,7 @@ to its destination """
 
 import numpy as np
 from bluesky import core, stack, traf, settings #, navdb, sim, scr, tools
+from bluesky.tools.aero import ft
 
 def checker(idx):
     # find out the current active waypoint
@@ -17,7 +18,7 @@ def checker(idx):
         sec_last_wpt_lon = traf.ap.route[idx].wplon[sec_last_wptidx]
 
         # If all the conditions are satisfied, then use stack commands to descend this aircraft
-        if iwpid == sec_last_wptidx and traf.startDescend[idx] == False:
+        if iwpid == sec_last_wptidx:
 
             # call the stacks
             stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.1115982 SPD {traf.id[idx]} 0")
@@ -25,7 +26,13 @@ def checker(idx):
             stack.stack(f"ATSPD {traf.id[idx]} 0 {traf.id[idx]} VNAV OFF")
             stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
 
-            # update the startDescend
+            # update startDescend
+            startDescend = True
+
+        elif iwpid == sec_last_wptidx + 1:
+            stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
+
+            # update startDescend
             startDescend = True
 
         else:

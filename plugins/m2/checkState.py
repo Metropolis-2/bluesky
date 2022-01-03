@@ -42,7 +42,6 @@ class checkState(core.Entity):
             self.acingeofence = np.array([], dtype=bool)
 
         # update traf
-        traf.startDescend = self.startDescend
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
@@ -60,7 +59,6 @@ class checkState(core.Entity):
         self.acingeofence[-n:] = False
 
         # update traf
-        traf.startDescend = self.startDescend
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
@@ -71,13 +69,12 @@ class checkState(core.Entity):
         super().delete(idx)
 
         # update traf
-        traf.startDescend = self.startDescend
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
 
-    @core.timed_function(name='descendcheck', dt=settings.asas_dt/2)
+    @core.timed_function(name='descendcheck', dt=0.5)
     def update(self):
         for i in traf.id:
             idx = traf.id2idx(i)
@@ -97,10 +94,9 @@ class checkState(core.Entity):
             self.overshot[idx] = val
             traf.overshot = self.overshot
 
-            # # descend checker
-            # startDesc = descendcheck.checker(idx)
-            # self.startDescend = startDesc
-            # traf.startDescend = self.startDescend
+            # descend checker
+            if not self.startDescend[idx]:
+                self.startDescend[idx] = descendcheck.checker(idx)
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):
