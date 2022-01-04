@@ -388,6 +388,11 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                     else:
                         # keep hovering
                         traf.ap.vs[idx] = traf.resovs[idx]
