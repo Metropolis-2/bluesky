@@ -4,7 +4,7 @@ import geopandas as gp
 from pyproj import CRS
 import os
 import rtree
-import re
+from plugins.m2.nodesToCommands_v2 import PathPlanner, ScenarioMaker
 
 #Set accordingly
 GRAPH_LOCATION = 'plugins\\m2\\graphs'
@@ -67,6 +67,79 @@ def read_graph(gpkg):
 
     return graph_dict
 
+def generate_stackcmd(new_nodeids, G, alt):
+    # Total Airspace Unc GPKG
+
+    path_planner = PathPlanner(G, angle_cutoff=45)
+    scenario = ScenarioMaker()
+
+    fplan_id = "D1"
+    start_time = 0
+    fplan_priority = "4"
+    fplan_arrivaltime = "198"
+    fplan_vehicle = "MP20"
+    operational_altitude = alt
+
+    fp_landingLat = 48.218146
+    fp_landingLon = 16.3151026
+    fp_landingAlt = 0
+
+    list_nodes_id = new_nodeids
+
+    lats, lons, turns, int_angle_list = path_planner.route(list_nodes_id)  # 1ºarg: route of node_ids
+
+    alts = []
+    while (len(alts) != len(lats)):
+        alts.append(operational_altitude)
+
+    init_lat_route = lats[0]
+    init_lon_route = lons[0]
+    print("init position route {},{}".format(init_lat_route, init_lon_route))
+    final_lat_route = lats[-1]
+    final_lon_route = lons[-1]
+    print("final position route {},{}".format(final_lat_route, final_lon_route))
+
+
+    # LANDING
+    if (final_lat_route != fp_landingLat or final_lon_route != fp_landingLon):
+        lats.insert(len(lats), final_lat_route)
+        lons.insert(len(lats), final_lon_route)
+        alts.insert(len(lats), fp_landingAlt)
+        turns.insert(len(lats), False)
+
+    # Insert at the end (landing)
+    lats.insert(len(lats), fp_landingLat)
+    lons.insert(len(lons), fp_landingLon)
+    alts.insert(len(alts), fp_landingAlt)
+    turns.insert(len(turns), False)
+
+    print("lats: {}".format(lats))
+    print("lons: {}".format(lons))
+    print("alts: {}".format(alts))
+    print("turns: {}".format(turns))
+    print("int_angle_list: {}".format(int_angle_list))
+
+    # Initialize scenario
+    scenario_dict = dict()
+    # Create dictionary
+    scenario_dict[fplan_id] = dict()  # key is the id of fplan
+    # Add start time
+    scenario_dict[fplan_id]['start_time'] = start_time
+    # Add lats
+    scenario_dict[fplan_id]['lats'] = lats
+    # Add lons
+    scenario_dict[fplan_id]['lons'] = lons
+    # Add alts
+    scenario_dict[fplan_id]['alts'] = alts
+    # Add turnbool
+    scenario_dict[fplan_id]['turnbool'] = turns
+
+    print("scenario_dict: {}".format(scenario_dict))
+
+    lines = scenario.Dict2Scn(scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle,
+                              int_angle_list)
+    return lines[-1].lstrip('00:00:00>')
+
 #105 second loading time with 3 graphs, maybe we can use pooling for loading?
 graphs_dict={}
 for i in graphs:
@@ -78,14 +151,13 @@ aircraft = json.load(open(AIRCRAFT_LOCATION))
 
 """ BlueSky plugin template. The text you put here will be visible
     in BlueSky as the description of your plugin. """
-from random import randint
+
 import numpy as np
 from bluesky.tools.aero import kts, ft
 # Import the global bluesky objects. Uncomment the ones you need
 from bluesky import core, stack, traf, tools #, settings, navdb, sim, scr
 from shapely.geometry import Polygon, MultiPolygon, LineString,Point
 import networkx as nx
-import itertools
 
 def init_plugin():
     ''' Plugin initialisation function. '''
@@ -130,6 +202,8 @@ class tactical_reroute(core.Entity):
             graphs_dict['multi']['graph'],
             initial_point,final_point,True)
 
+        temp_graph = graphs_dict['multi']['graph'].copy()
+
         new_fplat = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
         new_fplon = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
         new_fpalt = 0 # going standard to 0 because overshoot standards reroutes in layer 0
@@ -145,7 +219,7 @@ class tactical_reroute(core.Entity):
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
             for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
@@ -153,7 +227,7 @@ class tactical_reroute(core.Entity):
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+                stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
@@ -200,8 +274,6 @@ class tactical_reroute(core.Entity):
 
         new_nodeids = shortest_path(temp_graph,initial_point,final_point,True)
 
-        new_fplat = graphs_dict[layerDirection]['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
-        new_fplon = graphs_dict[layerDirection]['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
         if ownship.alt[acid] == 0:
             new_fpalt = 0
         elif 'reso' in layerName[0]:
@@ -220,16 +292,14 @@ class tactical_reroute(core.Entity):
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {i[1]} {i[0]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
