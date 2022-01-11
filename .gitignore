@@ -93,3 +93,4 @@ ssd.obj
 .ropeproject/config.py
 *.ini
 scenario/M2/ic.scn
+scenario/M2/Test.scn
