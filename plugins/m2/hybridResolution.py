@@ -513,11 +513,8 @@ class hybridResolution(ConflictResolution):
         elif prioOwn == prioInt:  # if both drones have the same priority, the callsign breaks the deadlock
 
             # get number in the callsign of the ownship and intruder
-            numberOwn = int("".join([elem for elem in [char for char in traf.id[idxown] if
-                                                       char.isdigit()]]))  # int(traf.id[idxown][1:]) # This is a simpler and faster solution if callsigns are of the format 'D12345'
-            numberInt = int("".join(
-                [elem for elem in
-                 [char for char in traf.id[idxint] if char.isdigit()]]))  # int(traf.id[idxint][1:])
+            numberOwn = int(traf.id[idxown][1:]) # This is a simpler and faster solution if callsigns are of the format 'D12345'
+            numberInt = int(traf.id[idxint][1:])
 
             # The aircraft if the the higher callsign has lower priority, and therefore has to resolve
             if numberOwn > numberInt:
