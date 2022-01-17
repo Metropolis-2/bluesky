@@ -74,7 +74,7 @@ class checkState(core.Entity):
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
 
-    @core.timed_function(name='descendcheck', dt=0.5)
+    @core.timed_function(name='descendcheck', dt=5)
     def update(self):
         for i in traf.id:
             idx = traf.id2idx(i)
@@ -97,6 +97,10 @@ class checkState(core.Entity):
             # descend checker
             if not self.startDescend[idx]:
                 self.startDescend[idx] = descendcheck.checker(idx)
+            # if for some reason the startDescend boolean is true, but the aircraft was not deleted,
+            # then delete the aircraft when it is below 1 ft
+            elif traf.alt[idx] < 1.0 / ft:
+                stack.stack(f"{traf.id[idx]} DEL")
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):

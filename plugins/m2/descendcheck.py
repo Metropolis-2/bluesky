@@ -35,6 +35,12 @@ def checker(idx):
             # update startDescend
             startDescend = True
 
+        elif traf.alt[idx] < 1 / ft:
+            stack.stack(f"{traf.id[idx]} DEL")
+
+            # update startDescend
+            startDescend = True
+
         else:
             startDescend = False
 
