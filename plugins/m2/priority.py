@@ -38,9 +38,9 @@ class priority(core.Entity):
     
     def create(self, n=1):
         ''' This function sets the default priority for all created aircraft 
-        to 1 (low priority) '''
+        to 5 (highest priority -> rogue aircraft) '''
         super().create(n)
-        self.priority[-n:] = 1
+        self.priority[-n:] = 5
         traf.priority = self.priority
 
     def delete(self, idx):
