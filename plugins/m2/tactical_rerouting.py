@@ -189,7 +189,6 @@ class tactical_reroute(core.Entity):
         self.reroutes[-n:] = 0
         traf.reroutes = self.reroutes
 
-#TODO change to reroute overshoot
     @stack.command
     def rerouteovershoot(self, acid: 'acid'):
         ownship = traf
@@ -206,7 +205,7 @@ class tactical_reroute(core.Entity):
 
         new_fplat = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
         new_fplon = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
-        new_fpalt = 0 # going standard to 0 because overshoot standards reroutes in layer 0
+        new_fpalt = 30 # going standard to 0 because overshoot standards reroutes in layer 0
         ownship_type = ownship.type[acid]
 
         try:
@@ -248,8 +247,6 @@ class tactical_reroute(core.Entity):
         idxCurrentLayer = np.where(ownship.aclayername[acid] == ownship.layernames)[0]
         layerDirection = ownship.layerdirection[idxCurrentLayer][0]
         layerName = ownship.aclayername[acid]
-        #TODO: loop through the list of edges in the geofence and increase the lengths of these edges
-        # calculate bearings then set as edge attributes
 
         geofences = tools.areafilter.basic_shapes
         # geo_save_dict =
@@ -276,7 +273,7 @@ class tactical_reroute(core.Entity):
 
         if ownship.alt[acid] == 0:
             new_fpalt = 0
-        elif 'reso' in layerName[0]:
+        elif 'reso' in layerName:
             new_fpalt = ownship.layerLowerAlt[idxCurrentLayer][0] / ft
         else:
             new_fpalt = ownship.layerLowerAlt[idxCurrentLayer+1][0] / ft

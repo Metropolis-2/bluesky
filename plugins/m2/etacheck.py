@@ -6,8 +6,6 @@ import numpy as np
 from bluesky import core, stack, traf, sim, tools #, settings, navdb, scr, tools
 from datetime import datetime
 
-everis_sta=True
-
 ### Initialization function of your plugin. Do not change the name of this
 ### function, as it is the way BlueSky recognises this file as a plugin.
 def init_plugin():
@@ -27,9 +25,10 @@ def init_plugin():
     return config
 
 class sta:
-    def __init__(self, time, utctime):
+    def __init__(self, time:int, utctime, reroutes: int):
         self.time = time  # integer
         self.utctime = utctime
+        self.reroutes = reroutes
 
 class etaCheck(core.Entity):
     ''' Example new entity object for BlueSky. '''
@@ -41,24 +40,32 @@ class etaCheck(core.Entity):
             self.sta = np.array([],dtype=object)
             self.eta = np.array([])
             self.delayed = np.array([],dtype=float)
+            self.turns = np.array([],dtype=object)
+            self.turnspeed = np.array([],dtype=object)
 
         traf.orignwp = self.orignwp
         traf.sta = self.sta
         traf.eta = self.eta
         traf.delayed = self.delayed
+        traf.turns = self.turns
+        traf.turnspeed = self.turnspeed
 
     def create(self, n=1):
         super().create(n)
         # After base creation we can change the values in our own states for the new aircraft
         self.orignwp[-n:] = 0
-        self.sta[-n:] = 0
+        self.sta[-n:] = sta(time=0,utctime=0,reroutes=0)
         self.eta[-n:] = 0
         self.delayed[-n:] = False
+        self.turns[-n:] = 0
+        self.turnspeed[-n:] = 0
 
         traf.orignwp = self.orignwp
         traf.sta = self.sta
         traf.eta = self.eta
         traf.delayed = self.delayed
+        traf.turns = self.turns
+        traf.turnspeed = self.turnspeed
 
     def delete(self, idx):
         super().delete(idx)
@@ -67,46 +74,27 @@ class etaCheck(core.Entity):
         traf.sta = self.sta
         traf.eta = self.eta
         traf.delayed = self.delayed
+        traf.turns = self.turns
+        traf.turnspeed = self.turnspeed
 
     @core.timed_function(name='update_eta', dt=5)
     def update(self):
-        if everis_sta:
-            for i in traf.id:
-                acid = traf.id2idx(i)
-                ac_route = traf.ap.route[acid]
-                nwp = ac_route.nwp
-                orignwp = self.orignwp[acid]
+        for i in traf.id:
+            acid = traf.id2idx(i)
+            ac_route = traf.ap.route[acid]
 
-                if nwp == 0:
-                    continue
-                if self.sta[acid] == 0:
-                    continue
+            if ac_route.nwp == 0:
+                continue
 
-                self.eta[acid] = self.calc_eta(acid)
-
-                diff = self.check_eta(acid)
-                self.delayed[acid] = diff
+            if self.sta[acid].time == 0:
+                self.sta[acid].time = self.calc_eta(acid)
+            #todo update reroutes in sta class when reroute tactical
 
 
+            self.eta[acid] = self.calc_eta(acid)
 
-        if not everis_sta:
-            for i in traf.id:
-                acid = traf.id2idx(i)
-                ac_route = traf.ap.route[acid]
-                nwp = ac_route.nwp
-                orignwp = self.orignwp[acid]
-
-                if nwp == 0:
-                    continue
-
-                if nwp != orignwp:
-                    self.sta[acid] = self.calc_eta(acid)
-                    self.orignwp[acid] = nwp
-
-                self.eta[acid] = self.calc_eta(acid)
-
-                diff = self.check_eta(acid)
-                self.delayed[acid] = diff
+            diff = self.check_eta(acid)
+            self.delayed[acid] = diff
 
             traf.orignwp = self.orignwp
             traf.sta = self.sta
@@ -175,10 +163,7 @@ class etaCheck(core.Entity):
 
     def check_eta(self, acid: 'acid'):
 
-        if everis_sta:
-            sta = self.sta[acid].time
-        if not everis_sta:
-            sta = self.sta[acid]
+        sta = self.sta[acid].time
         eta=self.eta[acid]
         diff = sta - eta
         # print(acid,diff)
@@ -205,9 +190,35 @@ class etaCheck(core.Entity):
 
         return distance, time
 
+
+    @stack.command()
+    def setturns(self, acid:'acid', *turnid: int):
+        ''' set turnid's and turns for acid
+            Arguments:
+            - acid: aircraft id
+            - turnid: one or more waypoint ids that are a turn
+        '''
+        self.turns[acid] = list(turnid)
+        traf.turns = self.turns
+        return True
+
+    @stack.command()
+    def setturnspds(self, acid:'acid', *turnspds: int):
+        ''' set turnid's and turns for acid
+            Arguments:
+            - acid: aircraft id
+            - turnspds: turnspeeds corresponding to turns in the order the waypoint ids of setturns were supplied.
+        '''
+        self.turnspeed[acid] = list(turnspds)
+        traf.turnspeed = self.turnspeed
+        return True
+
+
+'''
     @stack.command
     def setsta(self, acid: 'acid',time):
         date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+int(time))).strftime("%Y-%M-%d, %H:%M:%S")
         self.sta[acid] = sta(int(time),str(date_time))
         traf.sta=self.sta
         return True, f'{traf.id[acid]} STA is set to {tools.misc.tim2txt(int(time)+sim.simt)}'
+'''
