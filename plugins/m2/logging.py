@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # Import the global bluesky objects. Uncomment the ones you need
-from bluesky import core, traf, stack, sim #, core #, settings, navdb,  scr, tools
+from bluesky import core, traf, settings #, core #, settings, navdb,  scr, tools, stack, sim,
 from bluesky.tools import datalog
 conheader = \
     '#######################################################\n' + \
@@ -69,7 +69,7 @@ class logging(core.Entity):
         self.loslog = datalog.crelog('LOSLOG', None, losheader)
         self.start = False
 
-    @core.timed_function(name='logging', dt=sim.simdt)
+    @core.timed_function(name='logging', dt=settings.asas_dt, hook='postupdate')
     def update(self):
         if self.start == False:
             self.hybridlog.start()
@@ -89,7 +89,7 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.hybridlog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], traf.resostrategy[idx1], ac2[i], list_pf[traf.flightphase[idx2][0]], traf.resostrategy[idx2])
+                self.hybridlog.log(ac1[i], list_pf[traf.flightphase[idx1[i]]], traf.resostrategy[idx1[i]], ac2[i], list_pf[traf.flightphase[idx2[i]]], traf.resostrategy[idx2[i]])
         self.prevconfpairs = set(traf.cd.confpairs)
 
         lospairs_new = list(set(traf.cd.lospairs) - self.prevlospairs)
@@ -99,6 +99,6 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1][0]], ac2[i], list_pf[traf.flightphase[idx2][0]])
+                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1[i]]], traf.resostrategy[idx1[i]], ac2[i], list_pf[traf.flightphase[idx2[i]]], traf.resostrategy[idx2[i]])
         self.prevlospairs = set(traf.cd.lospairs)
 
