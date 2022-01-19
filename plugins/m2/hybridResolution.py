@@ -208,7 +208,7 @@ class hybridResolution(ConflictResolution):
                     # append the intruder callsigns that ownship is currently resolving in traf.resoidint
                     traf.resoidint[confidxs[i]].append(traf.id[confidxs[0]])
 
-                newgs[confidxs[i]] = rs.reso9(confidxs[i], confidxs[0])
+                newgs[confidxs[i]], newvs[confidxs[i]], newalt[confidxs[i]] = rs.reso9(confidxs[i], confidxs[0])
             stack.stack(f"ECHO {' & '.join(list(map(traf.id.__getitem__, confidxs[1:])))} are resolving conflict with {traf.id[confidxs[0]]} using reso9: multi aircraft conflict")
 
             ################### END CR Strategy Switch ###################
