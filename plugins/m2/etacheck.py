@@ -6,6 +6,24 @@ import numpy as np
 from bluesky import core, stack, traf, sim, tools #, settings, navdb, scr, tools
 from datetime import datetime
 
+turn_delay=\
+    {'MP30':
+        {
+            15:3,
+            10:4,
+            5:6,
+            2:8
+        },
+    'MP20':
+        {
+            15:1,
+            10:1,
+            5:3,
+            2:5
+        }
+    }
+
+
 ### Initialization function of your plugin. Do not change the name of this
 ### function, as it is the way BlueSky recognises this file as a plugin.
 def init_plugin():
@@ -77,7 +95,7 @@ class etaCheck(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
-    @core.timed_function(name='update_eta', dt=5)
+    @core.timed_function(name='update_eta', dt=1)
     def update(self):
         for i in traf.id:
             acid = traf.id2idx(i)
@@ -86,12 +104,17 @@ class etaCheck(core.Entity):
             if ac_route.nwp == 0:
                 continue
 
+            if ac_route.iactwp == -1:
+                continue
+
             if self.sta[acid].time == 0:
-                self.sta[acid].time = self.calc_eta(acid)
+                self.sta[acid].time, self.sta[acid].utctime = self.calc_eta(acid)
+                print(f'{traf.id[acid]} sta: {self.sta[acid].utctime}')
+
             #todo update reroutes in sta class when reroute tactical
 
-
-            self.eta[acid] = self.calc_eta(acid)
+            self.eta[acid], _ = self.calc_eta(acid)
+            #print(f'{acid} eta: {_}')
 
             diff = self.check_eta(acid)
             self.delayed[acid] = diff
@@ -110,15 +133,23 @@ class etaCheck(core.Entity):
         # get the flightplan and details
         ac_route = ownship.ap.route[acid]
         iactwp = ac_route.iactwp
+
+        if iactwp == ac_route.nwp - 2:
+            print(f'ARRIVED {traf.id[acid]} {datetime.fromtimestamp(int(sim.utc.timestamp())).strftime("%Y-%m-%d, %H:%M:%S")}')
+
         next_lat = ac_route.wplat[iactwp]
         next_lon = ac_route.wplon[iactwp]
         next_alt = ac_route.wpalt[iactwp]
 
-        # use previous waypoint speed as aircraft speed since actual speed results in infinte or to great delay when hovering
-        try:
-            ac_gs =ac_route.wpspd[iactwp - 1]
-        except:
-            ac_gs = ac_route.wpspd[iactwp]
+        # use standard aircraft cruising speed for the speed.
+        ownship_type = traf.type[acid]
+        if ownship_type == 'MP20':
+            ac_gs=20*tools.aero.kts
+        elif ownship_type == 'MP30':
+            ac_gs = 30*tools.aero.kts
+        else:
+            ac_gs = 20*tools.aero.kts
+
 
         # get the current ownship aircraft state
         ac_lat = ownship.lat[acid]
@@ -131,17 +162,17 @@ class etaCheck(core.Entity):
 
         total_distance += distance
         total_time += time
-
         # calculate rest of route
-        for idx in range(iactwp, ac_route.nwp + 1):
+        for idx in range(iactwp, ac_route.nwp - 1):
             # stop the loop if it is at the final waypoint
-            max_wpidx = np.argmax(ac_route.wpname)
+            max_wpidx = np.argmax(ac_route.wpname) - 2
             if idx == max_wpidx:
                 break
 
             cur_lat = ac_route.wplat[idx]
             cur_lon = ac_route.wplon[idx]
             cur_gs = ac_route.wpspd[idx]
+
             #TODO change the vsmax at to the applicable value
             cur_vs = ownship.perf.vsmax[acid]
             cur_alt = ac_route.wpalt[idx]
@@ -155,11 +186,14 @@ class etaCheck(core.Entity):
             total_distance += distance
             total_time += time
 
-
         # determine the eta
+
         eta = sim.utc.timestamp()+total_time
 
-        return eta
+        eta = eta + self.turnDelay(acid)
+        date_time = datetime.fromtimestamp(int(eta)).strftime("%Y-%m-%d, %H:%M:%S")
+
+        return eta, date_time
 
     def check_eta(self, acid: 'acid'):
 
@@ -190,6 +224,16 @@ class etaCheck(core.Entity):
 
         return distance, time
 
+    def turnDelay(self,acid:'acid'):
+        turnspd = self.turnspeed[acid]
+        turns = self.turns[acid]
+        ac_route = traf.ap.route[acid]
+        turnspd = turnspd[np.where(turns > ac_route.iactwp)]
+        ownship_type = traf.type[acid]
+        delay = 0
+        for i in turnspd:
+            delay += turn_delay[ownship_type][i]
+        return delay
 
     @stack.command()
     def setturns(self, acid:'acid', *turnid: int):
@@ -198,7 +242,7 @@ class etaCheck(core.Entity):
             - acid: aircraft id
             - turnid: one or more waypoint ids that are a turn
         '''
-        self.turns[acid] = list(turnid)
+        self.turns[acid] = np.array(turnid)
         traf.turns = self.turns
         return True
 
@@ -209,16 +253,7 @@ class etaCheck(core.Entity):
             - acid: aircraft id
             - turnspds: turnspeeds corresponding to turns in the order the waypoint ids of setturns were supplied.
         '''
-        self.turnspeed[acid] = list(turnspds)
+        self.turnspeed[acid] = np.array(turnspds)
         traf.turnspeed = self.turnspeed
         return True
 
-
-'''
-    @stack.command
-    def setsta(self, acid: 'acid',time):
-        date_time = datetime.fromtimestamp(int(sim.utc.timestamp()+int(time))).strftime("%Y-%M-%d, %H:%M:%S")
-        self.sta[acid] = sta(int(time),str(date_time))
-        traf.sta=self.sta
-        return True, f'{traf.id[acid]} STA is set to {tools.misc.tim2txt(int(time)+sim.simt)}'
-'''

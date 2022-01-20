@@ -65,11 +65,13 @@ class speedUpdate(core.Entity):
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is speeding up")
+                print(f'{traf.id[idxown]} too SLOW')
             elif diff > 20:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
-            elif abs(diff) < 15 and traf.speedupdate[idxown] == True:
+                print(f'{traf.id[idxown]} too FAST')
+            elif abs(diff) < 10 and traf.speedupdate[idxown] == True:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
