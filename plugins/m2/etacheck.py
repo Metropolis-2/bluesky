@@ -107,9 +107,12 @@ class etaCheck(core.Entity):
             if ac_route.iactwp == -1:
                 continue
 
+            if ac_route.iactwp == ac_route.nwp - 2:
+                continue
+
             if self.sta[acid].time == 0:
                 self.sta[acid].time, self.sta[acid].utctime = self.calc_eta(acid)
-                print(f'{traf.id[acid]} sta: {self.sta[acid].utctime}')
+                #print(f'STA,{traf.id[acid]},{self.sta[acid].time}')
 
             #todo update reroutes in sta class when reroute tactical
 
@@ -134,8 +137,9 @@ class etaCheck(core.Entity):
         ac_route = ownship.ap.route[acid]
         iactwp = ac_route.iactwp
 
-        if iactwp == ac_route.nwp - 2:
-            print(f'ARRIVED {traf.id[acid]} {datetime.fromtimestamp(int(sim.utc.timestamp())).strftime("%Y-%m-%d, %H:%M:%S")}')
+        #if iactwp == ac_route.nwp - 2:
+            #print(f'ARRIVED,{traf.id[acid]},{int(sim.utc.timestamp())}')
+
 
         next_lat = ac_route.wplat[iactwp]
         next_lon = ac_route.wplon[iactwp]

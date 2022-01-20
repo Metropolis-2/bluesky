@@ -44,6 +44,10 @@ class speedUpdate(core.Entity):
         for i in traf.id:
             acid = traf.id2idx(i)
             ac_diff = traf.delayed[acid]
+            ac_route = traf.ap.route[acid]
+            iactwp = ac_route.iactwp
+            if iactwp == ac_route.nwp - 2:
+                continue
             if traf.resostrategy[acid] == "None":
                 self.setSpeed(acid, ac_diff)
 #TODO add traf array with bools that indicates if an ac is speed updating.
@@ -52,21 +56,20 @@ class speedUpdate(core.Entity):
 
         # Determine the layer index of the current layer of ownship
         idxCurrentLayer = np.where(traf.layernames == traf.aclayername[idxown])[0]
+        nameCurrentLayer = traf.aclayername[idxown]
         ac_route = traf.ap.route[idxown]
         iactwp = ac_route.iactwp
-        nameCurrentLayer = traf.aclayername[idxown]
-
         if re.match('cruising.+',nameCurrentLayer) is not None and traf.flightphase[idxown] == 0 and iactwp > 0:
             # get the currect layers speed limits
             lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
             upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
 
-            if diff < -20:
+            if diff < -30:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is speeding up")
                 print(f'{traf.id[idxown]} too SLOW')
-            elif diff > 20:
+            elif diff > 30:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
