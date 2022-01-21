@@ -12,14 +12,14 @@ turn_delay=\
             15:3,
             10:4,
             5:6,
-            2:8
+            2:9
         },
     'MP20':
         {
             15:1,
             10:1,
             5:3,
-            2:5
+            2:7
         }
     }
 
@@ -107,7 +107,7 @@ class etaCheck(core.Entity):
             if ac_route.iactwp == -1:
                 continue
 
-            if ac_route.iactwp == ac_route.nwp - 2:
+            if ac_route.iactwp >= ac_route.nwp - 2:
                 continue
 
             if self.sta[acid].time == 0:
@@ -137,10 +137,6 @@ class etaCheck(core.Entity):
         ac_route = ownship.ap.route[acid]
         iactwp = ac_route.iactwp
 
-        #if iactwp == ac_route.nwp - 2:
-            #print(f'ARRIVED,{traf.id[acid]},{int(sim.utc.timestamp())}')
-
-
         next_lat = ac_route.wplat[iactwp]
         next_lon = ac_route.wplon[iactwp]
         next_alt = ac_route.wpalt[iactwp]
@@ -167,11 +163,7 @@ class etaCheck(core.Entity):
         total_distance += distance
         total_time += time
         # calculate rest of route
-        for idx in range(iactwp, ac_route.nwp - 1):
-            # stop the loop if it is at the final waypoint
-            max_wpidx = np.argmax(ac_route.wpname) - 2
-            if idx == max_wpidx:
-                break
+        for idx in range(iactwp, ac_route.nwp - 3):
 
             cur_lat = ac_route.wplat[idx]
             cur_lon = ac_route.wplon[idx]
@@ -204,7 +196,7 @@ class etaCheck(core.Entity):
         sta = self.sta[acid].time
         eta=self.eta[acid]
         diff = sta - eta
-        # print(acid,diff)
+        #print(acid,diff)
         return diff
 
     def horizontal_leg(self, start_lat, start_lon, end_lat, end_lon, spd):

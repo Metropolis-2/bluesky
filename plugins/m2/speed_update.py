@@ -64,17 +64,17 @@ class speedUpdate(core.Entity):
             lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
             upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
 
-            if diff < -30:
+            if diff < -25:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is speeding up")
                 print(f'{traf.id[idxown]} too SLOW')
-            elif diff > 30:
+            elif diff > 25:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
                 print(f'{traf.id[idxown]} too FAST')
-            elif abs(diff) < 10 and traf.speedupdate[idxown] == True:
+            elif abs(diff) < 15 and traf.speedupdate[idxown] == True:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
