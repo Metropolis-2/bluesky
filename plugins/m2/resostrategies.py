@@ -73,6 +73,8 @@ def reso2(idxown, idxint, limitspeed=True):
         else:
             resospd = upperSpdLimit
             traf.resospd[idxown] = resospd
+    else:
+        traf.resospd[idxown] = resospd
 
     return resospd
 
