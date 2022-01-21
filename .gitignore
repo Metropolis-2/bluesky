@@ -1,7 +1,9 @@
 output
 scenario/ic.scn
+scenario/Nino/*
 data/cache
 data/grib
+data/netcdf
 data/performance/BADA/*
 !/data/performance/BADA/README.md
 
@@ -100,3 +102,5 @@ scenario/M2/Example_flight_intention_low_200fplans_EXP_4.scn
 scenario/M2/Example_flight_intention_low_500_heavy_constrain_area_VBOX_18-01-22_sorted.scn
 scenario/M2/M2_Test_FlightPlan_tiny_1FP.scn
 scenario/M2/M2_Test_FlightPlan_tiny_3FP.scn
+plugins/invdKDtree.py
+

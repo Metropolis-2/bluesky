@@ -90,6 +90,10 @@ class Geofence(areafilter.Poly):
     # "hits" contains the geofences that aircraft are about to hit (or are intruding)
     intrusions = dict()
     hits = dict()
+    
+    # Unique intrusions dictionary: for each aircraft, keep track of the unique intrusions
+    # that ever happened.
+    unique_intrusions = dict()
 
     # read edge_geometry.csv as pandas dataframe
     edges_df = pd.read_csv('plugins/edge_geometry.csv')
@@ -155,7 +159,7 @@ class Geofence(areafilter.Poly):
     def intersecting(cls, coordinates):
         '''Get the geofences that intersect coordinates (either bbox or point).'''
         poly_ids = cls.geo_tree.intersection(coordinates)
-        return [cls.geo_by_id[id] for id in poly_ids]
+        return [cls.geo_by_id[id] for id in poly_ids], poly_ids
 
     @classmethod
     def detect_all(cls, traf, dtlookahead=None):
@@ -168,7 +172,7 @@ class Geofence(areafilter.Poly):
         for idx, line in enumerate(zip(traf.lat, traf.lon, pred_lat, pred_lon)):
             acid = traf.id[idx]
             # First a course detection based on geofence bounding boxes
-            potential_hits = areafilter.get_intersecting(*line)
+            potential_hits= areafilter.get_intersecting(*line)
             # Then a fine-grained intersection detection
             hits = []
             for geofence in potential_hits:
@@ -184,12 +188,17 @@ class Geofence(areafilter.Poly):
         for idx, point in enumerate(zip(traf.lat, traf.lon, traf.alt)):
             acid = traf.id[idx]
             # First, a course detection based on geofence bounding boxes
-            potential_intrusions = cls.intersecting([point[0], point[1]])
+            potential_intrusions, geo_ids = cls.intersecting([point[0], point[1]])
             # Then a fine-grained intrusion detection
             intrusions = []
-            for geofence in potential_intrusions:
+            for i, geofence in enumerate(potential_intrusions):
                 if geofence.checkInside(*point):
                     intrusions.append(geofence)
+                    # Add geofence ID to unique intrusion dictionary
+                    if acid not in cls.unique_intrusions:
+                        cls.unique_intrusions[acid] = set()
+                    # Add to set
+                    cls.unique_intrusions[acid].add(geo_ids[i])
             cls.intrusions[acid] = intrusions
         # print(intrusions)
         return

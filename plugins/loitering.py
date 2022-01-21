@@ -58,6 +58,9 @@ class Loitering(Entity):
         # add constrained nodes inside this geofence to Geofence.nodes_in_loiter_geofence
         geofence.update_edges_in_loitering_geofences(f'LOITER{acid}', update='add')
 
+        # add the geofence to the screen
+        bs.scr.objappend("POLY", f'Loiter {acid}', bs.traf.loiter.futuregeofences[acidx])
+
         # Then delete the aircraft
         bs.traf.delete(acidx)
         
@@ -76,6 +79,9 @@ class Loitering(Entity):
             if bs.traf.loiter.loitergeofences[acid]['time_left'] < 0:
                 # remove nodes from nodes_in_geofence
                 Geofence.update_edges_in_loitering_geofences(f'LOITER{acid}', update='del')
+
+                # delete from screen
+                bs.scr.objappend("POLY", f'Loiter {acid}', None)
 
                 # keep a list of deleted geofences. Once it appears here concepts know that
                 # they can remove the geofence from their planning.
