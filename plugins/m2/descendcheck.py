@@ -4,6 +4,7 @@ to its destination """
 import numpy as np
 from bluesky import core, stack, traf, settings #, navdb, sim, scr, tools
 from bluesky.tools.aero import ft
+from plugins.m2.conflictprobe import conflictProbe
 
 def checker(idx):
     # find out the current active waypoint
@@ -18,7 +19,8 @@ def checker(idx):
         sec_last_wpt_lon = traf.ap.route[idx].wplon[sec_last_wptidx]
 
         # If all the conditions are satisfied, then use stack commands to descend this aircraft
-        if iwpid == sec_last_wptidx:
+        if iwpid == sec_last_wptidx and not conflictProbe(traf, traf, idx, dtlook=traf.dtlookdown[idx],
+                                         targetVs=traf.perf.vsmin[idx]):
 
             stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
             # call the stacks
@@ -31,6 +33,7 @@ def checker(idx):
             startDescend = True
 
         elif iwpid == sec_last_wptidx + 1:
+            stack.stack(f"ALT {traf.id[idx]} 0")
             stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
 
             # update startDescend
