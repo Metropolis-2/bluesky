@@ -205,7 +205,7 @@ class tactical_reroute(core.Entity):
 
         new_fplat = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
         new_fplon = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
-        new_fpalt = 30 # going standard to 0 because overshoot standards reroutes in layer 0
+        new_fpalt = 30 
         ownship_type = ownship.type[acid]
 
         try:
