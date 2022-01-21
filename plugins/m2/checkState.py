@@ -95,7 +95,7 @@ class checkState(core.Entity):
             traf.overshot = self.overshot
 
             # descend checker
-            if not self.startDescend[idx] and traf.loiter.geodurations[idx] == 0.0:
+            if not self.startDescend[idx] and traf.loiter.geodurations[idx] == '' and traf.resostrategy[idx] == 'None':
                 self.startDescend[idx] = descendcheck.checker(idx)
             # if for some reason the startDescend boolean is true, but the aircraft was not deleted,
             # then delete the aircraft when it is below 1 ft

@@ -93,4 +93,14 @@ ssd.obj
 *-checkpoint.py
 *-checkpoint.ipynb
 .ropeproject/config.py
+*.ini
+scenario/M2/ic.scn
+scenario/M2/Test.scn
+scenario/M2/Example_flight_intention_low_200fplans_16-12-21_100cre.scn
+scenario/M2/Example_flight_intention_low_200fplans_EXP_3.scn
+scenario/M2/Example_flight_intention_low_200fplans_EXP_4.scn
+scenario/M2/Example_flight_intention_low_500_heavy_constrain_area_VBOX_18-01-22_sorted.scn
+scenario/M2/M2_Test_FlightPlan_tiny_1FP.scn
+scenario/M2/M2_Test_FlightPlan_tiny_3FP.scn
 plugins/invdKDtree.py
+
