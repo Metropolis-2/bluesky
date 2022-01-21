@@ -270,11 +270,19 @@ class hybridResolution(ConflictResolution):
                 # New: determine priority of the idx1 (ownship) in conflict
                 idx1Resolves = self.priorityChecker(idx1, idx2)
 
+
+
+
                 # boolean to maintain sufficient distance for speed resolution
                 if traf.resostrategy[idx1] == "RESO2" or traf.resostrategy[idx1] == "RESO5" or traf.resostrategy[idx1] == "RESO9":
                     distnotok = (hdist < rpz * 2.0)
                 elif traf.resostrategy[idx1] == "RESO8":
                     distnotok = dalt < traf.layerHeight
+
+                # make sure AC continues flying in reso layer until sufficient horizontal separation, regardless of the vertical separation
+                elif traf.resostrategy[idx1] == "RESO1":
+                    distnotok = (hdist < rpz * 2.0)
+                    ver_los = distnotok
                 else:
                     distnotok = False
 
@@ -403,9 +411,7 @@ class hybridResolution(ConflictResolution):
                 elif traf.resostrategy[idx] == "RESO5":
                     # If it is safe to descend back to the cruising altitude, then do so!
                     reso5probe = conflictProbe(ownship, intruder, idx, dtlook=traf.dtlookdown[idx],
-                                               targetVs=traf.perf.vsmin[idx]) and conflictProbe(ownship, intruder,
-                                                                                                idx, targetGs=
-                                                                                                traf.recoveryspd[idx])
+                                               targetVs=traf.perf.vsmin[idx]) #and conflictProbe(ownship, intruder, idx, targetGs=traf.recoveryspd[idx])
                     if not reso5probe:
                         traf.resostrategy[idx] = "None"
                         traf.cr.hdgactive[idx] = False
