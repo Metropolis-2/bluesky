@@ -1,6 +1,7 @@
 output
 scenario/ic.scn
 scenario/Nino/*
+scenario/M2/*
 data/cache
 data/grib
 data/netcdf
