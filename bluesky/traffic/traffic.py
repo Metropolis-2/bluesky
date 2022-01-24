@@ -13,7 +13,7 @@ import bluesky as bs
 from bluesky.core import Entity, timed_function
 from bluesky.stack import refdata, command
 from bluesky.stack.recorder import savecmd
-from bluesky.tools import geo
+from bluesky.tools import geo, datalog
 from bluesky.tools.misc import latlon2txt
 from bluesky.tools.aero import cas2tas, casormach2tas, fpm, kts, ft, g0, Rearth, nm, tas2cas,\
                          vatmos,  vtas2cas, vtas2mach, vcasormach
@@ -50,6 +50,91 @@ bs.settings.set_variable_defaults(performance_model='openap', asas_dt=1.0)
 #     print('Using BlueSky legacy performance model')
 #     from .performance.legacy.perfbs import PerfBS as Perf
 
+flstheader = \
+    '#######################################################\n' + \
+    'FLST LOG\n' + \
+    'Flight Statistics\n' + \
+    '#######################################################\n\n' + \
+    'Parameters [Units]:\n' + \
+    'Deletion Time [s], ' + \
+    'Call sign [-], ' + \
+    'Spawn Time [s], ' + \
+    'Flight time [s], ' + \
+    'Distance 2D [m], ' + \
+    'Distance 3D [m], ' + \
+    'Distance ALT [m],' + \
+    'Work Done [MJ], ' + \
+    'Latitude [deg], ' + \
+    'Longitude [deg], ' + \
+    'Altitude [ft], ' + \
+    'TAS [kts], ' + \
+    'Vertical Speed [fpm], ' + \
+    'Heading [deg], ' + \
+    'ASAS Active [bool], ' + \
+    'Pilot ALT [ft], ' + \
+    'Pilot SPD (TAS) [kts], ' + \
+    'Pilot HDG [deg], ' + \
+    'Pilot VS [fpm]\n'
+
+confheader = \
+    '#######################################################\n' + \
+    'CONF LOG\n' + \
+    'Conflict Statistics\n' + \
+    '#######################################################\n\n' + \
+    'Parameters [Units]:\n' + \
+    'Simulation time [s], ' + \
+    'ACID1 [-],' + \
+    'ACID2 [-],' + \
+    'LAT1 [deg],' + \
+    'LON1 [deg],' + \
+    'ALT1 [ft],' + \
+    'LAT2 [deg],' + \
+    'LON2 [deg],' + \
+    'ALT2 [ft],' + \
+    'CPALAT [lat],' + \
+    'CPALON [lon]\n'
+    
+losheader = \
+    '#######################################################\n' + \
+    'LOS LOG\n' + \
+    'LOS Statistics\n' + \
+    '#######################################################\n\n' + \
+    'Parameters [Units]:\n' + \
+    'LOS exit time [s], ' + \
+    'LOS start time [s],' + \
+    'Time of min distance [s],' + \
+    'ACID1 [-],' + \
+    'ACID2 [-],' + \
+    'LAT1 [deg],' + \
+    'LON1 [deg],' + \
+    'ALT1 [ft],' + \
+    'LAT2 [deg],' + \
+    'LON2 [deg],' + \
+    'ALT2 [ft],' + \
+    'DIST [m]\n'
+    
+regheader = \
+    '#######################################################\n' + \
+    'REGULAR LOG\n' + \
+    'Statistics recorded regularly at a certain simtime interval.\n' + \
+    '#######################################################\n\n' + \
+    'Parameters [Units]:\n' + \
+    'Simulation time [s], ' + \
+    'ACIDs or ALTs [-][ft]\n'
+    
+geoheader = \
+    '#######################################################\n' + \
+    'GEOFENCE LOG\n' + \
+    'Statistics recorded upon aircraft deletion\n' + \
+    '#######################################################\n\n' + \
+    'Parameters [Units]:\n' + \
+    'Deletion time [s], ' + \
+    'Call sign[-],' + \
+    'Geofence ID[-],' + \
+    'Max intrusion [m],' + \
+    'Intrusion LAT [deg],' + \
+    'Intrusion LON [deg],' + \
+    'Intrusion time [s]\n'
 
 class Traffic(Entity):
     """
@@ -77,6 +162,19 @@ class Traffic(Entity):
         self.ntraf = 0
         
         self.minwindalt = 50.*ft # altitude above which wind is applied
+        
+        # Loggers and other vars
+        self.flst = datalog.crelog('FLSTLOG', None, flstheader)
+        self.conflog = datalog.crelog('CONFLOG', None, confheader)
+        self.reglog = datalog.crelog('REGLOG', None, regheader)
+        self.geolog = datalog.crelog('GEOLOG', None, geoheader)
+        self.loslog = datalog.crelog('LOSLOG', None, losheader)
+        self.geo_intrusions = dict()
+        self.prevconfpairs = set()
+        self.prevlospairs = set()
+        self.confinside_all = 0
+        self.deleted_aircraft = 0
+        self.losmindist = dict()
 
         self.cond = Condition()  # Conditional commands list
         self.wind = WindSim()
@@ -159,6 +257,12 @@ class Traffic(Entity):
             self.coslat = np.array([])  # Cosine of latitude for computations
             self.eps    = np.array([])  # Small nonzero numbers
             self.work   = np.array([])  # Work done throughout the flight
+            
+            # Metrics
+            self.distance2D = np.array([])
+            self.distance3D = np.array([])
+            self.distancealt = np.array([])
+            self.create_time = np.array([])
 
         # Default bank angles per flight phase
         self.bphase = np.deg2rad(np.array([15, 35, 35, 35, 15, 45]))
@@ -185,6 +289,14 @@ class Traffic(Entity):
 
         # Reset transition level to default value
         self.translvl = 5000.*ft
+        
+        #Loggers
+        self.prevconfpairs = set()
+        self.prevlospairs = set()
+        self.confinside_all = 0
+        self.numgeobreaches_all = 0
+        self.prevnumgeobreaches_all = 0
+        self.deleted_aircraft = 0
 
     def mcre(self, n, actype="B744", acalt=None, acspd=None, dest=None):
         """ Create one or more random aircraft in a specified area """
@@ -302,6 +414,8 @@ class Traffic(Entity):
         for j in range(self.ntraf - n, self.ntraf):
             for cmdtxt in self.crecmdlist:
                  bs.stack.stack(self.id[j]+" "+cmdtxt)
+                 
+        self.create_time[-n:] = bs.sim.simt
 
 
     def creconfs(self, acid, actype, targetidx, dpsi, dcpa, tlosh, dH=None, tlosv=None, spd=None):
@@ -380,6 +494,42 @@ class Traffic(Entity):
 
     def delete(self, idx):
         """Delete an aircraft"""
+        acid = np.array(self.id)[idx]
+        # Log everything that there is to log
+        self.flst.log(
+            acid,
+            self.create_time[idx],
+            bs.sim.simt,
+            (self.distance2D[idx]),
+            (self.distance3D[idx]),
+            (self.distancealt[idx]),
+            (self.work[idx])*1e-6,
+            self.lat[idx],
+            self.lon[idx],
+            self.alt[idx]/ft,
+            self.tas[idx]/kts,
+            self.vs[idx]/fpm,
+            self.hdg[idx],
+            self.cr.active[idx],
+            self.aporasas.alt[idx]/ft,
+            self.aporasas.tas[idx]/kts,
+            self.aporasas.vs[idx]/fpm,
+            self.aporasas.hdg[idx])
+        
+        if acid in self.geo_intrusions:
+            geo_intr = self.geo_intrusions[acid]
+            for geoid in geo_intr:
+                items = geo_intr[geoid]
+                self.geolog.log(
+                    np.array(self.id)[idx],
+                    geoid,
+                    items[0],
+                    items[1],
+                    items[2],
+                    items[3])
+                
+            self.geo_intrusions.pop(acid)
+
         # If this is a multiple delete, sort first for list delete
         # (which will use list in reverse order to avoid index confusion)
         if isinstance(idx, Collection):
@@ -390,6 +540,7 @@ class Traffic(Entity):
 
         # Update number of aircraft
         self.ntraf = len(self.lat)
+        self.deleted_aircraft += 1
         return True
 
     def update(self):
@@ -429,6 +580,93 @@ class Traffic(Entity):
 
         #---------- Aftermath ---------------------------------
         self.trails.update()
+        
+        # Update metrics
+        resultantspd = np.sqrt(self.gs * self.gs + self.vs * self.vs)
+        self.distance2D += bs.sim.simdt * abs(self.gs)
+        self.distance3D += bs.sim.simdt * resultantspd
+        self.distancealt += bs.sim.simdt * abs(self.vs)
+        
+        confpairs_new = list(set(self.cd.confpairs) - self.prevconfpairs)
+        if confpairs_new:
+            done_pairs = []
+            for pair in set(confpairs_new):
+                # Get the two aircraft
+                idx1 = self.id.index(pair[0])
+                idx2 = self.id.index(pair[1])
+                done_pairs.append((idx1,idx2))
+                if (idx2,idx1) in done_pairs:
+                    continue
+                pair_idx = self.cd.confpairs.index(pair)
+                cpalatlon = geo.qdrpos(self.lat[idx1], self.lon[idx1], self.hdg[idx1], self.cd.dcpa[pair_idx]/nm)
+                    
+                self.conflog.log(pair[0], pair[1],
+                                self.lat[idx1], self.lon[idx1],self.alt[idx1],
+                                self.lat[idx2], self.lon[idx2],self.alt[idx2],
+                                cpalatlon[0], cpalatlon[1])
+                
+        self.prevconfpairs = set(self.cd.confpairs)
+        
+        # Losses of separation as well
+        # We want to track the LOS, and log the minimum distance and altitude between these two aircraft.
+        # This gives us the lospairs that were here previously but aren't anymore
+        lospairs_out = list(self.prevlospairs - set(self.cd.lospairs))
+        
+        # Attempt to calculate current distance for all current lospairs, and store it in the dictionary
+        # if entry doesn't exist yet or if calculated distance is smaller.
+        for pair in self.cd.lospairs:
+            idx1 = self.id.index(pair[0])
+            idx2 = self.id.index(pair[1])
+            # Calculate current distance between them [m]
+            losdistance = geo.kwikdist(self.lat[idx1], self.lon[idx1], self.lat[idx2], self.lon[idx2])*nm
+            # To avoid repeats, the dictionary entry is DxDy, where x<y. So D32 and D564 would be D32D564
+            dictkey = pair[0]+pair[1] if int(pair[0][1:]) < int(pair[1][1:]) else pair[1]+pair[0]
+            if dictkey not in self.losmindist:
+                # Set the entry
+                self.losmindist[dictkey] = [losdistance, 
+                                            self.lat[idx1], self.lon[idx1], self.alt[idx1], 
+                                            self.lat[idx2], self.lon[idx2], self.alt[idx2],
+                                            bs.sim.simt, bs.sim.simt]
+                # The last guy over here                    ^ is the LOS start time
+            else:
+                # Entry exists, check if calculated is smaller
+                if self.losmindist[dictkey][0] > losdistance:
+                    # It's smaller. Make sure to keep the LOS start time
+                    self.losmindist[dictkey] = [losdistance, 
+                                            self.lat[idx1], self.lon[idx1], self.alt[idx1], 
+                                            self.lat[idx2], self.lon[idx2], self.alt[idx2],
+                                            bs.sim.simt, self.losmindist[dictkey][8]]
+        
+        # Log data if there are aircraft that are no longer in LOS
+        if lospairs_out:
+            done_pairs = []
+            for pair in set(lospairs_out):
+                # Get the two aircraft
+                idx1 = self.id.index(pair[0])
+                idx2 = self.id.index(pair[1])
+                done_pairs.append((idx1,idx2))
+                if (idx2,idx1) in done_pairs:
+                    continue
+                # Get their dictkey
+                dictkey = pair[0]+pair[1] if int(pair[0][1:]) < int(pair[1][1:]) else pair[1]+pair[0]
+                # Get their distance
+                losdata = self.losmindist[dictkey]
+                # Remove this aircraft pair from losmindist
+                self.losmindist.pop(dictkey)
+                #Log the LOS
+                self.loslog.log(losdata[7], losdata[8], pair[0], pair[1],
+                                losdata[1], losdata[2],losdata[3],
+                                losdata[4], losdata[5],losdata[6],
+                                losdata[0])
+                
+        
+        self.prevlospairs = set(self.cd.lospairs)
+        
+    @timed_function(name='reglog', dt=60)
+    def thereglog(self):
+        self.reglog.log(*self.id)
+        self.reglog.log(*self.alt/ft)
+        return
 
     @timed_function(name='asas', dt=bs.settings.asas_dt, manual=True)
     def update_asas(self):
@@ -851,3 +1089,11 @@ class Traffic(Entity):
     def setminwindalt(self, alt:'alt'):
         self.minwindalt = alt
         return
+    
+    @command 
+    def STARTM2LOG(self):
+        self.flst.start()
+        self.conflog.start()
+        self.reglog.start()
+        self.geolog.start()
+        self.loslog.start()

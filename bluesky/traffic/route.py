@@ -452,59 +452,6 @@ class Route(Replaceable):
 
         return idx
 
-    @stack.command
-    def addwaypoints(acidx: 'acid', *args):
-        # Args come in this order: lat, lon, alt, spd, TURNSPD/TURNRAD/FLYBY, turnspeed or turnrad value
-        # If turn is '0', then ignore turnspeed
-        if len(args)%6 !=0:
-            bs.scr.echo('You missed a waypoint value, arguement number must be a multiple of 6.')
-            return
-
-        acid = bs.traf.id[acidx]
-        acrte = Route._routes.get(acid)
-
-        args = reshape(args, (int(len(args)/6), 6))
-
-        for wpdata in args:
-            # Get needed values
-            lat = float(wpdata[0]) # deg
-            lon = float(wpdata[1]) # deg
-            if wpdata[2]:
-                alt = txt2alt(wpdata[2]) # comes in feet, convert
-            else:
-                alt = -999
-            if wpdata[3]:
-                spd = txt2spd(wpdata[3])
-            else:
-                spd = -999
-
-            # Do flyby or flyturn processing
-            if wpdata[4] in ['TURNSPD', 'TURNSPEED']:
-                acrte.turnspd = txt2spd(wpdata[5])
-                acrte.swflyby   = False
-                acrte.swflyturn = True
-            elif wpdata[4] in ['TURNRAD', 'TURNRADIUS']:
-                acrte.turnrad = float(wpdata[5])
-                acrte.swflyby   = False
-                acrte.swflyturn = True
-            else:
-                # Either it's a flyby, or a typo.
-                acrte.swflyby   = True
-                acrte.swflyturn = False
-
-
-            name    = acid
-            wptype  = Route.wplatlon
-
-            wpidx = acrte.addwpt_simple(acidx, name, wptype, lat, lon, alt, spd)
-
-        # Calculate flight plan
-        acrte.calcfp()
-
-        # Check for success by checking inserted location in flight plan >= 0
-        if wpidx < 0:
-            return False, "Waypoint " + name + " not added."
-
     def addwpt_simple(self, iac, name, wptype, lat, lon, alt=-999., spd=-999.):
         """Adds waypoint in the most simple way possible"""
         # For safety
@@ -955,10 +902,6 @@ class Route(Replaceable):
         bs.traf.actwp.flyturn[acidx] = acrte.wpflyturn[wpidx]
         bs.traf.actwp.turnrad[acidx] = acrte.wpturnrad[wpidx]
         bs.traf.actwp.turnspd[acidx] = acrte.wpturnspd[wpidx]
-        
-        bs.traf.actwp.nextturnlat[acidx], bs.traf.actwp.nextturnlon[acidx], \
-        bs.traf.actwp.nextturnspd[acidx], bs.traf.actwp.nextturnrad[acidx], \
-        bs.traf.actwp.nextturnidx[acidx] = acrte.getnextturnwp()
 
         bs.traf.actwp.nextturnlat[acidx], bs.traf.actwp.nextturnlon[acidx], \
         bs.traf.actwp.nextturnspd[acidx], bs.traf.actwp.nextturnrad[acidx], \
@@ -1100,24 +1043,6 @@ class Route(Replaceable):
         if ipage + 1 < npages:
             bs.scr.cmdline("LISTRTE " + acid + "," + str(ipage + 1))
             
-    def getnextturnwp(self):
-        """Give the next turn waypoint data."""
-        # Starting point
-        wpidx = self.iactwp
-        # Find next turn waypoint index
-        turnidx_all = where(self.wpflyturn)[0]
-        argwhere_arr = argwhere(turnidx_all>=wpidx)
-        if argwhere_arr.size == 0:
-            # No turn waypoints, return default values
-            return [0., 0., -999., -999., -999.]
-
-        trnidx = turnidx_all[argwhere(turnidx_all>=wpidx)[0]][0]
-
-
-
-        # Return the next turn waypoint info
-        return [self.wplat[trnidx], self.wplon[trnidx], self.wpturnspd[trnidx], self.wpturnrad[trnidx], trnidx]
-
     def getnextturnwp(self):
         """Give the next turn waypoint data."""
         # Starting point

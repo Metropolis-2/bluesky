@@ -1,3 +1,5 @@
+import numpy as np
+
 import bluesky as bs
 from bluesky import stack
 from bluesky.core import Entity
@@ -29,7 +31,14 @@ class Loitering(Entity):
         with self.settrafarrays():
             self.futuregeofences = []
             self.geodurations = []
+            self.loiterbool = np.array([], dtype = bool)
         bs.traf.loiter = self
+
+    def create(self, n=1):
+        super().create(n)
+        
+        # default value of loiter bool is always False
+        self.loiterbool[-n:] = False
     
     @staticmethod
     @stack.command
@@ -42,6 +51,7 @@ class Loitering(Entity):
         # Store the geofence data in the array until it needs to be enacted
         bs.traf.loiter.futuregeofences[acidx] = geocoords
         bs.traf.loiter.geodurations[acidx] = geodur
+        bs.traf.loiter.loiterbool[acidx] = True
     
     @staticmethod
     @stack.command
