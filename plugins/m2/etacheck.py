@@ -95,7 +95,7 @@ class etaCheck(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
-    @core.timed_function(name='update_eta', dt=1)
+    @core.timed_function(name='update_eta', dt=0.5)
     def update(self):
         for i in traf.id:
             acid = traf.id2idx(i)
@@ -107,12 +107,15 @@ class etaCheck(core.Entity):
             if ac_route.iactwp == -1:
                 continue
 
+            if ac_route.iactwp == ac_route.nwp - 2:
+                print(f'ATA,{traf.id[acid]},{self.eta[acid]}')
+
             if ac_route.iactwp >= ac_route.nwp - 2:
                 continue
 
             if self.sta[acid].time == 0:
                 self.sta[acid].time, self.sta[acid].utctime = self.calc_eta(acid)
-                #print(f'STA,{traf.id[acid]},{self.sta[acid].time}')
+                print(f'STA,{traf.id[acid]},{self.sta[acid].time}')
 
             #todo update reroutes in sta class when reroute tactical
 
