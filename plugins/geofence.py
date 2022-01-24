@@ -25,7 +25,7 @@ def init_plugin():
     return config
 
 @stack.command()
-def geofence(name: 'txt', top: float, bottom: float, *coordinates: float):
+def geofence(name: 'txt', top: float = 999999, bottom: float = -999999, *coordinates: float):
     ''' Create a new geofence from the stack. 
         
         Arguments:
