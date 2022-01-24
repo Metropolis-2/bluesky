@@ -76,7 +76,7 @@ class Autopilot(Entity, replaceable=True):
             self.route = []
 
 
-        self.reached = []    # List indices of aircraft who have reached their active waypoint
+        self.idxreached = []    # List indices of aircraft who have reached their active waypoint
 
     def create(self, n=1):
         super().create(n)

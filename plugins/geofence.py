@@ -1,3 +1,4 @@
+from lib2to3.pgen2 import driver
 import bluesky as bs
 from bluesky import settings, stack
 from bluesky.core.simtime import timed_function
@@ -8,6 +9,9 @@ import json
 import numpy as np
 import pandas as pd
 from shapely import wkt
+from shapely.geometry import Point
+from shapely.ops import nearest_points
+import geopandas as gpd
 
 settings.set_variable_defaults(geofence_dtlookahead=30)
 
@@ -30,7 +34,7 @@ def geofence(name: 'txt', top: float, bottom: float, *coordinates: float):
         - bottom: The bottom of the geofence in feet.
         - coordinates: three or more lat/lon coordinates in degrees.
     '''
-    Geofence(name, top, bottom, coordinates)
+    Geofence(name, coordinates, top, bottom)
     return True, f'Created geofence {name}'
 
 
@@ -63,7 +67,51 @@ def loadgeofences(filename: 'txt'):
         Geofence(geofence['name'], geofence['coordinates'], geofence['top'], geofence['bottom'])
     bs.scr.echo(f'Geofences loaded from {filename}.')
 
-@timed_function(dt = 1)
+@stack.command()
+def loadgeojson(filename: 'txt', name_col: 'txt', top_col: 'txt', bottom_col: 'txt'=None):
+    '''Load geofences from a GeoJSON file. Must be in EPSG:4326 format.'''
+    if filename[-5:] != '.geojson':
+        filename = filename + '.geojson'
+    try:
+        loaded_gpd = gpd.read_file(f'data/geofences/{filename}', driver='GeoJSON')
+    except:
+        bs.scr.echo(f'File empty or does not exist.')
+        return
+
+    # now try to check if the column exists and put in lower case
+    try:
+        if name_col not in loaded_gpd.columns:
+            name_col = name_col.lower()
+
+        if top_col not in loaded_gpd.columns:
+            top_col = top_col.lower()
+
+        if bottom_col:
+            if bottom_col not in loaded_gpd.columns:
+                bottom_col = bottom_col.lower()
+        else:
+            bottom_col = 'bottom'
+            loaded_gpd[bottom_col] = 0.0
+
+    except:
+        bs.scr.echo(f'Columns not found.')
+        return
+
+    for _, geofence in loaded_gpd.iterrows():
+
+        # extract coordiantes from geofence gdf
+        lons = geofence.geometry.boundary.xy[0]
+        lats = geofence.geometry.boundary.xy[1]
+
+        # convert into a list of lat/lon
+        coordinates = [None]*(len(lons)*2)
+        coordinates[::2] = lats
+        coordinates[1::2] = lons
+        
+        Geofence(geofence[name_col], coordinates, geofence[top_col], geofence[bottom_col])
+    bs.scr.echo(f'Geofences loaded from {filename}.')
+
+@timed_function(dt = 0.5)
 def update_intrusions():
     Geofence.detect_inside(bs.traf)
     return
@@ -184,22 +232,34 @@ class Geofence(areafilter.Poly):
     @classmethod
     def detect_inside(cls, traf):
         # Reset the intrusions dict
-        cls.intrusions.clear()
+        #cls.intrusions.clear()
         for idx, point in enumerate(zip(traf.lat, traf.lon, traf.alt)):
             acid = traf.id[idx]
             # First, a course detection based on geofence bounding boxes
             potential_intrusions, geo_ids = cls.intersecting([point[0], point[1]])
             # Then a fine-grained intrusion detection
-            intrusions = []
+            #intrusions = []
             for i, geofence in enumerate(potential_intrusions):
                 if geofence.checkInside(*point):
-                    intrusions.append(geofence)
+                    #intrusions.append(geofence)
                     # Add geofence ID to unique intrusion dictionary
                     if acid not in cls.unique_intrusions:
-                        cls.unique_intrusions[acid] = set()
-                    # Add to set
-                    cls.unique_intrusions[acid].add(geo_ids[i])
-            cls.intrusions[acid] = intrusions
+                        cls.unique_intrusions[acid] = dict()
+                    # Create shapely polygon
+                    
+                    # Get closest point
+                    p1,p2 = nearest_points(geofence.polybound, Point(traf.lat[idx], traf.lon[idx]))
+                    # Do kwikdist
+                    intrusion = geo.kwikdist(p1.x, p1.y, p2.x, p2.y) * aero.nm
+                    # Check the previous intrusion severity
+                    if geo_ids[i] in cls.unique_intrusions[acid]:
+                        if cls.unique_intrusions[acid][geo_ids[i]][0] < intrusion:
+                            cls.unique_intrusions[acid][geo_ids[i]] = [intrusion, p2.x, p2.y, bs.sim.simt]
+                    else:
+                        cls.unique_intrusions[acid][geo_ids[i]] = [intrusion, p2.x, p2.y,  bs.sim.simt]
+                    
+            #cls.intrusions[acid] = intrusions
+        bs.traf.geo_intrusions = cls.unique_intrusions
         # print(intrusions)
         return
 
