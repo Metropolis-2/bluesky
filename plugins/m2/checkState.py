@@ -47,7 +47,7 @@ class checkState(core.Entity):
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
 
-
+        self.reference_ac = []
     def create(self, n=1):
         ''' This function gets called automatically when new aircraft are created. '''
         # Don't forget to call the base class create when you reimplement this function!
@@ -74,6 +74,25 @@ class checkState(core.Entity):
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
 
+    def reset(self):
+        ''' Reset area state when simulation is reset. '''
+        super().reset()
+        with self.settrafarrays():
+            self.startDescend = np.array([], dtype=bool)  # array of booleans to check if descend can start
+            self.overshot = np.array([], dtype=bool)
+            self.wptdist = np.array([])
+            self.ingeofence = np.array([], dtype=bool)
+            self.acingeofence = np.array([], dtype=bool)
+
+        # update traf
+        traf.overshot = self.overshot
+        traf.wptdist = self.wptdist
+        traf.ingeofence = self.ingeofence
+        traf.acingeofence = self.acingeofence
+
+        self.reference_ac = []
+
+
     @core.timed_function(name='descendcheck', dt=5)
     def update(self):
         for i in traf.id:
@@ -93,6 +112,11 @@ class checkState(core.Entity):
             val = overshootcheck.checker(idx, dist)
             self.overshot[idx] = val
             traf.overshot = self.overshot
+
+            if traf.id[idx] not in self.reference_ac:
+                lastwpname = traf.ap.route[idx].wpname[-1]
+                stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
+                self.reference_ac.append(traf.id[idx])
 
             # descend checker
             if not self.startDescend[idx] and traf.loiter.geodurations[idx] == '' and traf.resostrategy[idx] == 'None':
