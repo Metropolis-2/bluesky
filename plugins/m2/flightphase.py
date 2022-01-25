@@ -6,7 +6,7 @@
 import numpy as np
 import copy
 # Import the global bluesky objects. Uncomment the ones you need
-from bluesky import core, stack, traf, settings, tools#, navdb, sim, scr, 
+from bluesky import core, stack, traf, settings, tools, sim #, navdb, sim, scr,
 
 def init_plugin():
     ''' Plugin initialisation function. '''

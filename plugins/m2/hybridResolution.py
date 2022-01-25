@@ -314,7 +314,7 @@ class hybridResolution(ConflictResolution):
 
             # Start recovery for ownship if intruder is deleted, or if past CPA
             # and not in horizontal LOS or a bouncing conflict. New: check idx1Resolves
-            if idx2 >= 0 and (not past_cpa or (distnotok and ver_los)):  # and not swlos:
+            if idx2 >= 0 and (not past_cpa or (distnotok and ver_los)) and not swlos:
                 # Enable ASAS for this aircraft
                 changeactive[idx1] = True
             else:
