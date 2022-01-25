@@ -76,6 +76,19 @@ class airspaceLayer(core.Entity):
         # add airspacelayertype to traffic so that it can be used by other plugins and the rest of bluesky
         traf.aclayername = self.airspacelayertype
 
+    def delete(self, idx):
+        super().delete(idx)
+        # update traf
+        traf.aclayername = self.airspacelayertype
+
+    def reset(self):
+        super().reset()
+        # add the airspacelayertype as new array per aircraft
+        with self.settrafarrays():
+            self.airspacelayertype = np.array([], dtype='S24')
+        # update traf
+        traf.aclayername = self.airspacelayertype
+
     @core.timed_function(name='airspacelayer', dt=0.1)
     def update(self):
         ''' Periodic update function that determines the layer type for all aircraft every second. '''

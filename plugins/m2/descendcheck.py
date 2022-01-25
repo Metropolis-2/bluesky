@@ -24,6 +24,7 @@ def checker(idx):
 
             stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
             # call the stacks
+            stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.1115982 {traf.id[idx]} VNAV OFF")
             stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} 0.1115982 SPD {traf.id[idx]} 0")
             stack.stack(f"ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} 0")
             stack.stack(f"ATSPD {traf.id[idx]} 0 {traf.id[idx]} VNAV OFF")
