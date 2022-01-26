@@ -2,8 +2,11 @@ import pandas as pd
 import numpy as np
 
 # Import the global bluesky objects. Uncomment the ones you need
-from bluesky import core, traf, settings #, core #, settings, navdb,  scr, tools, stack, sim,
+from bluesky import core, traf, settings, sim #, core #, settings, navdb,  scr, tools, stack, sim,
 from bluesky.tools import datalog
+
+deleted_aircraft = []
+
 conheader = \
     '#######################################################\n' + \
     'CONF LOG\n' + \
@@ -30,6 +33,11 @@ losheader = \
     'flightphase AC1 [-], ' + \
     'AC2 [-], ' + \
     'flightphase AC2 [-]\n'
+
+ftheader = 'Parameters [Units]:\n' + \
+            'Simulation time [s], ' + \
+            'Call sign, ' + \
+            'Flight time [s]\n'
 
 
 def init_plugin():
@@ -58,7 +66,23 @@ class logging(core.Entity):
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
         self.loslog = datalog.crelog('LOSLOG', None, losheader)
+        self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
+
+        with self.settrafarrays():
+            self.spawntime = np.array([])
+
+    def create(self, n=1):
+        super().create(n)
+        self.spawntime[-n:] = sim.simt
+
+    def delete(self, idx):
+        if traf.id[idx[0]] not in deleted_aircraft:
+            flighttime = sim.simt - self.spawntime[idx[0]]
+            self.ftlog.log(traf.id[idx[0]], flighttime)
+            deleted_aircraft.append(traf.id[idx[0]])
+        super().delete(idx)
+
 
     def reset(self):
         ''' Reset area state when simulation is reset. '''
@@ -67,6 +91,7 @@ class logging(core.Entity):
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
         self.loslog = datalog.crelog('LOSLOG', None, losheader)
+        self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
 
     @core.timed_function(name='logging', dt=settings.asas_dt, hook='postupdate')
@@ -74,6 +99,7 @@ class logging(core.Entity):
         if self.start == False:
             self.hybridlog.start()
             self.loslog.start()
+            self.ftlog.start()
             self.start = True
 
 

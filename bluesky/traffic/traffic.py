@@ -131,6 +131,7 @@ geoheader = \
     'Deletion time [s], ' + \
     'Call sign[-],' + \
     'Geofence ID[-],' + \
+    'Geofence name [-],' + \
     'Max intrusion [m],' + \
     'Intrusion LAT [deg],' + \
     'Intrusion LON [deg],' + \
@@ -526,8 +527,9 @@ class Traffic(Entity):
                     items[0],
                     items[1],
                     items[2],
-                    items[3])
-                
+                    items[3],
+                    items[4])
+
             self.geo_intrusions.pop(acid)
 
         # If this is a multiple delete, sort first for list delete
@@ -591,19 +593,21 @@ class Traffic(Entity):
         if confpairs_new:
             done_pairs = []
             for pair in set(confpairs_new):
-                # Get the two aircraft
-                idx1 = self.id.index(pair[0])
-                idx2 = self.id.index(pair[1])
-                done_pairs.append((idx1,idx2))
-                if (idx2,idx1) in done_pairs:
-                    continue
-                pair_idx = self.cd.confpairs.index(pair)
-                cpalatlon = geo.qdrpos(self.lat[idx1], self.lon[idx1], self.hdg[idx1], self.cd.dcpa[pair_idx]/nm)
-                    
-                self.conflog.log(pair[0], pair[1],
-                                self.lat[idx1], self.lon[idx1],self.alt[idx1],
-                                self.lat[idx2], self.lon[idx2],self.alt[idx2],
-                                cpalatlon[0], cpalatlon[1])
+                # Check if the aircraft still exist
+                if (pair[0] in self.id) and (pair[1] in self.id):
+                    # Get the two aircraft
+                    idx1 = self.id.index(pair[0])
+                    idx2 = self.id.index(pair[1])
+                    done_pairs.append((idx1,idx2))
+                    if (idx2,idx1) in done_pairs:
+                        continue
+                    pair_idx = self.cd.confpairs.index(pair)
+                    cpalatlon = geo.qdrpos(self.lat[idx1], self.lon[idx1], self.hdg[idx1], self.cd.dcpa[pair_idx]/nm)
+                        
+                    self.conflog.log(pair[0], pair[1],
+                                    self.lat[idx1], self.lon[idx1],self.alt[idx1],
+                                    self.lat[idx2], self.lon[idx2],self.alt[idx2],
+                                    cpalatlon[0], cpalatlon[1])
                 
         self.prevconfpairs = set(self.cd.confpairs)
         
@@ -615,41 +619,40 @@ class Traffic(Entity):
         # Attempt to calculate current distance for all current lospairs, and store it in the dictionary
         # if entry doesn't exist yet or if calculated distance is smaller.
         for pair in self.cd.lospairs:
-            idx1 = self.id.index(pair[0])
-            idx2 = self.id.index(pair[1])
-            # Calculate current distance between them [m]
-            losdistance = geo.kwikdist(self.lat[idx1], self.lon[idx1], self.lat[idx2], self.lon[idx2])*nm
-            # To avoid repeats, the dictionary entry is DxDy, where x<y. So D32 and D564 would be D32D564
-            dictkey = pair[0]+pair[1] if int(pair[0][1:]) < int(pair[1][1:]) else pair[1]+pair[0]
-            if dictkey not in self.losmindist:
-                # Set the entry
-                self.losmindist[dictkey] = [losdistance, 
-                                            self.lat[idx1], self.lon[idx1], self.alt[idx1], 
-                                            self.lat[idx2], self.lon[idx2], self.alt[idx2],
-                                            bs.sim.simt, bs.sim.simt]
-                # The last guy over here                    ^ is the LOS start time
-            else:
-                # Entry exists, check if calculated is smaller
-                if self.losmindist[dictkey][0] > losdistance:
-                    # It's smaller. Make sure to keep the LOS start time
+            # Check if the aircraft still exist
+            if (pair[0] in self.id) and (pair[1] in self.id):
+                idx1 = self.id.index(pair[0])
+                idx2 = self.id.index(pair[1])
+                # Calculate current distance between them [m]
+                losdistance = geo.kwikdist(self.lat[idx1], self.lon[idx1], self.lat[idx2], self.lon[idx2])*nm
+                # To avoid repeats, the dictionary entry is DxDy, where x<y. So D32 and D564 would be D32D564
+                dictkey = pair[0]+pair[1] if int(pair[0][1:]) < int(pair[1][1:]) else pair[1]+pair[0]
+                if dictkey not in self.losmindist:
+                    # Set the entry
                     self.losmindist[dictkey] = [losdistance, 
-                                            self.lat[idx1], self.lon[idx1], self.alt[idx1], 
-                                            self.lat[idx2], self.lon[idx2], self.alt[idx2],
-                                            bs.sim.simt, self.losmindist[dictkey][8]]
+                                                self.lat[idx1], self.lon[idx1], self.alt[idx1], 
+                                                self.lat[idx2], self.lon[idx2], self.alt[idx2],
+                                                bs.sim.simt, bs.sim.simt]
+                    # The last guy over here                    ^ is the LOS start time
+                else:
+                    # Entry exists, check if calculated is smaller
+                    if self.losmindist[dictkey][0] > losdistance:
+                        # It's smaller. Make sure to keep the LOS start time
+                        self.losmindist[dictkey] = [losdistance, 
+                                                self.lat[idx1], self.lon[idx1], self.alt[idx1], 
+                                                self.lat[idx2], self.lon[idx2], self.alt[idx2],
+                                                bs.sim.simt, self.losmindist[dictkey][8]]
         
         # Log data if there are aircraft that are no longer in LOS
         if lospairs_out:
             done_pairs = []
             for pair in set(lospairs_out):
-                # Get the two aircraft
-                idx1 = self.id.index(pair[0])
-                idx2 = self.id.index(pair[1])
-                done_pairs.append((idx1,idx2))
-                if (idx2,idx1) in done_pairs:
-                    continue
                 # Get their dictkey
                 dictkey = pair[0]+pair[1] if int(pair[0][1:]) < int(pair[1][1:]) else pair[1]+pair[0]
-                # Get their distance
+                # Is this pair in the dictionary?
+                if dictkey not in self.losmindist:
+                    # Pair was already logged, continue
+                    continue
                 losdata = self.losmindist[dictkey]
                 # Remove this aircraft pair from losmindist
                 self.losmindist.pop(dictkey)
@@ -741,6 +744,11 @@ class Traffic(Entity):
     def update_pos(self):
         # Update position
         self.alt = np.where(self.swaltsel, np.round(self.alt + self.vs * bs.sim.simdt, 6), self.aporasas.alt)
+        
+        # Set hard limits for alt for the Metropolis 2 project.
+        self.alt = np.where(self.alt < 0, 0, self.alt)
+        self.alt = np.where(self.alt > 500*ft, 500*ft, self.alt)
+        
         self.lat = self.lat + np.degrees(bs.sim.simdt * self.gsnorth / Rearth)
         self.coslat = np.cos(np.deg2rad(self.lat))
         self.lon = self.lon + np.degrees(bs.sim.simdt * self.gseast / self.coslat / Rearth)
