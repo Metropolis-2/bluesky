@@ -113,18 +113,18 @@ class checkState(core.Entity):
             self.overshot[idx] = val
             traf.overshot = self.overshot
 
+            # Delete the last waypoint at 0ft and 0kts
             if traf.id[idx] not in self.reference_ac:
                 lastwpname = traf.ap.route[idx].wpname[-1]
                 stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
                 self.reference_ac.append(traf.id[idx])
 
+            # TODO: Add speedupdate here
+            # if not self.startDescend[idx]:
+
             # descend checker
-            if not self.startDescend[idx] and traf.loiter.geodurations[idx] == '' and traf.resostrategy[idx] == 'None':
+            if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
                 self.startDescend[idx] = descendcheck.checker(idx)
-            # if for some reason the startDescend boolean is true, but the aircraft was not deleted,
-            # then delete the aircraft when it is below 1 ft
-            elif traf.alt[idx] < 1.0 * ft:
-                stack.stack(f"{traf.id[idx]} DEL")
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):
