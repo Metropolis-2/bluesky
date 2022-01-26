@@ -6,6 +6,10 @@ import numpy as np
 from bluesky import core, stack, traf, sim, tools #, settings, navdb, scr, tools
 from datetime import datetime
 
+start = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+with open(f'etacheckLog_{start}.csv', 'a') as the_file:
+    the_file.write(f'droneid,routeperc,delta,sta,eta\n')
+
 turn_delay=\
     {'MP30':
         {
@@ -95,7 +99,7 @@ class etaCheck(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
-    @core.timed_function(name='update_eta', dt=0.5)
+    @core.timed_function(name='update_eta', dt=1)
     def update(self):
         for i in traf.id:
             acid = traf.id2idx(i)
@@ -107,15 +111,15 @@ class etaCheck(core.Entity):
             if ac_route.iactwp == -1:
                 continue
 
-            if ac_route.iactwp == ac_route.nwp - 2:
-                print(f'ATA,{traf.id[acid]},{self.eta[acid]}')
+            #if ac_route.iactwp == ac_route.nwp - 2:
+                #print(f'ATA,{traf.id[acid]},{self.eta[acid]}')
 
             if ac_route.iactwp >= ac_route.nwp - 2:
                 continue
 
             if self.sta[acid].time == 0:
                 self.sta[acid].time, self.sta[acid].utctime = self.calc_eta(acid)
-                print(f'STA,{traf.id[acid]},{self.sta[acid].time}')
+                #print(f'STA,{traf.id[acid]},{self.sta[acid].time}')
 
             #todo update reroutes in sta class when reroute tactical
 
@@ -123,6 +127,10 @@ class etaCheck(core.Entity):
             #print(f'{acid} eta: {_}')
 
             diff = self.check_eta(acid)
+
+            with open('etacheckLog.csv', 'a') as the_file:
+                the_file.write(f'{i},{ac_route.iactwp/ac_route.nwp},{diff},{self.sta[acid].time},{self.eta[acid]}\n')
+
             self.delayed[acid] = diff
 
             traf.orignwp = self.orignwp

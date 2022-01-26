@@ -59,3 +59,4 @@ def checker(acid: 'acid', dist):
         val = False
     return val
 
+#TODO dont trigger overshoot if its less than 100m overshot.

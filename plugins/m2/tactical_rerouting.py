@@ -305,3 +305,6 @@ class tactical_reroute(core.Entity):
         traf.reroutes = self.reroutes
 
         return True, f'GEOFENCE - {traf.id[acid]} has a new route'
+
+
+#TODO del last wpt due to bug 
