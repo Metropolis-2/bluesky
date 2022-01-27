@@ -46,6 +46,7 @@ class checkState(core.Entity):
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
+        traf.startDescend = self.startDescend
 
         self.reference_ac = []
     def create(self, n=1):
@@ -63,6 +64,7 @@ class checkState(core.Entity):
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
+        traf.startDescend = self.startDescend
 
 
     def delete(self, idx):
@@ -73,6 +75,7 @@ class checkState(core.Entity):
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
+        traf.startDescend = self.startDescend
 
     def reset(self):
         ''' Reset area state when simulation is reset. '''
@@ -89,6 +92,7 @@ class checkState(core.Entity):
         traf.wptdist = self.wptdist
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
+        traf.startDescend = self.startDescend
 
         self.reference_ac = []
 
@@ -108,13 +112,14 @@ class checkState(core.Entity):
             traf.acingeofence = self.acingeofence
 
             # overshoot checker:
-            dist = overshootcheck.calc_dist(idx)
-            val = overshootcheck.checker(idx, dist)
-            self.overshot[idx] = val
-            traf.overshot = self.overshot
+            if not self.startDescend[idx]:
+                dist = overshootcheck.calc_dist(idx)
+                val = overshootcheck.checker(idx, dist)
+                self.overshot[idx] = val
+                traf.overshot = self.overshot
 
             # Delete the last waypoint at 0ft and 0kts
-            if traf.id[idx] not in self.reference_ac:
+            if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
                 lastwpname = traf.ap.route[idx].wpname[-1]
                 stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
                 self.reference_ac.append(traf.id[idx])
@@ -125,6 +130,8 @@ class checkState(core.Entity):
             # descend checker
             if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
                 self.startDescend[idx] = descendcheck.checker(idx)
+
+            traf.startDescend = self.startDescend
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):

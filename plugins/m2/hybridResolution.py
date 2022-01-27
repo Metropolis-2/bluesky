@@ -347,7 +347,7 @@ class hybridResolution(ConflictResolution):
             # and send the aircraft to that waypoint, but only if conflict probe is False.
             iwpid = traf.ap.route[idx].findact(idx)
 
-            if iwpid > -1 and traf.resostrategy[idx] != "None":  # To avoid problems if there are no waypoints
+            if iwpid > -1 and traf.resostrategy[idx] != "None" and not traf.startDescend[idx]:  # To avoid problems if there are no waypoints
                 # Get the max and min vertical speed of ownship (needed for conflict probe)
                 vsMinOwn = traf.perf.vsmin[idx]
                 vsMaxOwn = traf.perf.vsmax[idx]
@@ -451,8 +451,17 @@ class hybridResolution(ConflictResolution):
                     traf.cr.altactive[idx] = False
                     traf.cr.vsactive[idx] = False
 
-            # no waypoints
-            else:
+            elif traf.startDescend[idx] and not conflictProbe(ownship, intruder, idx, dtlook=traf.dtlookdown[idx],targetVs=traf.perf.vsmin[idx]) and traf.resostrategy[idx] != 'None':
+                traf.resostrategy[idx] = "None"
+                traf.cr.hdgactive[idx] = False
+                traf.cr.tasactive[idx] = False
+                traf.cr.altactive[idx] = False
+                traf.cr.vsactive[idx] = False
+                stack.stack(f"ALT {traf.id[idx]} 0")
+                stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
+
+            # # no waypoints
+            elif iwpid == -1:
                 traf.resostrategy[idx] = "None"
                 traf.cr.hdgactive[idx] = False
                 traf.cr.tasactive[idx] = False
