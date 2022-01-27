@@ -32,18 +32,8 @@ def checker(idx):
 
             # update startDescend
             startDescend = True
-
-        elif iwpid == sec_last_wptidx+1:
-            stack.stack(f"SPD {traf.id[idx]} 0")
-            stack.stack(f"ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} 0")
-            stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
-
-            # update startDescend
-            startDescend = True
-
         else:
             startDescend = False
-
     else:
         startDescend = False
 
