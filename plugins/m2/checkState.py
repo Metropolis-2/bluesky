@@ -101,37 +101,37 @@ class checkState(core.Entity):
     def update(self):
         for i in traf.id:
             idx = traf.id2idx(i)
+            if traf.priority[idx] != 5:
+                # ingeofence checker:
+                routeval, acval = ingeoFence.checker(acid=idx)
 
-            # ingeofence checker:
-            routeval, acval = ingeoFence.checker(acid=idx)
+                self.ingeofence[idx] = routeval
+                self.acingeofence[idx] = acval
 
-            self.ingeofence[idx] = routeval
-            self.acingeofence[idx] = acval
+                traf.ingeofence = self.ingeofence
+                traf.acingeofence = self.acingeofence
 
-            traf.ingeofence = self.ingeofence
-            traf.acingeofence = self.acingeofence
+                # overshoot checker:
+                if not self.startDescend[idx]:
+                    dist = overshootcheck.calc_dist(idx)
+                    val = overshootcheck.checker(idx, dist)
+                    self.overshot[idx] = val
+                    traf.overshot = self.overshot
 
-            # overshoot checker:
-            if not self.startDescend[idx]:
-                dist = overshootcheck.calc_dist(idx)
-                val = overshootcheck.checker(idx, dist)
-                self.overshot[idx] = val
-                traf.overshot = self.overshot
+                # Delete the last waypoint at 0ft and 0kts
+                if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
+                    lastwpname = traf.ap.route[idx].wpname[-1]
+                    stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
+                    self.reference_ac.append(traf.id[idx])
 
-            # Delete the last waypoint at 0ft and 0kts
-            if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
-                lastwpname = traf.ap.route[idx].wpname[-1]
-                stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
-                self.reference_ac.append(traf.id[idx])
+                # TODO: Add speedupdate here
+                # if not self.startDescend[idx]:
 
-            # TODO: Add speedupdate here
-            # if not self.startDescend[idx]:
+                # descend checker
+                if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
+                    self.startDescend[idx] = descendcheck.checker(idx)
 
-            # descend checker
-            if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
-                self.startDescend[idx] = descendcheck.checker(idx)
-
-            traf.startDescend = self.startDescend
+                traf.startDescend = self.startDescend
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):
