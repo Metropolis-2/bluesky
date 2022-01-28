@@ -22,7 +22,7 @@ conheader = \
     'resolution strategy AC2 [-]\n'
 
 
-losheader = \
+losheader2 = \
     '#######################################################\n' + \
     'LOS LOG\n' + \
     'LOS Statistics\n' + \
@@ -65,7 +65,7 @@ class logging(core.Entity):
         self.prevconfpairs = set()
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
-        self.loslog = datalog.crelog('LOSLOG', None, losheader)
+        self.loslog2 = datalog.crelog('LOSLOG2', None, losheader2)
         self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
 
@@ -90,7 +90,7 @@ class logging(core.Entity):
         self.prevconfpairs = set()
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
-        self.loslog = datalog.crelog('LOSLOG', None, losheader)
+        self.loslog2 = datalog.crelog('LOSLOG2', None, losheader2)
         self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
 
@@ -98,7 +98,7 @@ class logging(core.Entity):
     def update(self):
         if self.start == False:
             self.hybridlog.start()
-            self.loslog.start()
+            self.loslog2.start()
             self.ftlog.start()
             self.start = True
 
@@ -125,6 +125,6 @@ class logging(core.Entity):
             idx1 = traf.id2idx(ac1)
             idx2 = traf.id2idx(ac2)
             for i in range(len(ac1)):
-                self.loslog.log(ac1[i], list_pf[traf.flightphase[idx1[i]]], traf.resostrategy[idx1[i]], ac2[i], list_pf[traf.flightphase[idx2[i]]], traf.resostrategy[idx2[i]])
+                self.loslog2.log(ac1[i], list_pf[traf.flightphase[idx1[i]]], traf.resostrategy[idx1[i]], ac2[i], list_pf[traf.flightphase[idx2[i]]], traf.resostrategy[idx2[i]])
         self.prevlospairs = set(traf.cd.lospairs)
 
