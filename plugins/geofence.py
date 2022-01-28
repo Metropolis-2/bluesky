@@ -189,10 +189,12 @@ class Geofence(areafilter.Poly):
         ''' Reset geofence database when simulation is reset. '''
         cls.geo_by_name.clear()
         cls.geo_by_id.clear()
+        cls.geo_name2id.clear()
         cls.geo_save_dict.clear()
         cls.geo_tree = index.Index()
         cls.hits.clear()
         cls.intrusions.clear()
+        cls.unique_intrusions.clear()
 
     @classmethod
     def delete(cls, name):
