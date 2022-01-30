@@ -1,12 +1,6 @@
-
-from random import randint
-import numpy as np
 from shapely.geometry import Polygon, MultiPolygon, LineString,Point
 from bluesky import core, stack, traf, tools, settings
-import plugins.geofence as geofence_TUD
 
-
-#TODO ignore if current location or last waypoint is in a geofence.
 
 def checker(acid: 'acid', multiGeofence):
     # get the aircraft route to check against current geofence

@@ -15,6 +15,7 @@ graphs = []
 for file in os.listdir(GRAPH_LOCATION):
     if file.endswith(".gpkg"):
         graphs.append(file)
+
 #Function to obtain the dataframes of edges
 def edge_gdf_format_from_gpkg(edges):
     edge_dict = edges.to_dict()
@@ -151,7 +152,6 @@ def generate_stackcmd(
                               int_angle_list)
     return lines[-1].lstrip('00:00:00>')
 
-#105 second loading time with 3 graphs, maybe we can use pooling for loading?
 graphs_dict={}
 for i in graphs:
     j=i.rstrip(".gpkg")
@@ -199,7 +199,7 @@ class tactical_reroute(core.Entity):
         super().create(n)
         self.reroutes[-n:] = 0
         traf.reroutes = self.reroutes
-#TODO UPDATE the stack command generation to new version of everis
+
     @stack.command
     def rerouteovershoot(self, acid: 'acid'):
         ownship = traf
@@ -213,9 +213,6 @@ class tactical_reroute(core.Entity):
             initial_point,final_point,True)
 
         temp_graph = graphs_dict['multi']['graph'].copy()
-
-        new_fplat = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['x'].to_numpy()
-        new_fplon = graphs_dict['multi']['nodes'].set_index('osmid').loc[new_nodeids]['y'].to_numpy()
         new_fpalt = 30 
         ownship_type = ownship.type[acid]
 
@@ -228,8 +225,7 @@ class tactical_reroute(core.Entity):
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
@@ -238,8 +234,7 @@ class tactical_reroute(core.Entity):
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
@@ -302,7 +297,7 @@ class tactical_reroute(core.Entity):
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
@@ -313,4 +308,3 @@ class tactical_reroute(core.Entity):
         traf.reroutes = self.reroutes
 
         return True, f'GEOFENCE - {traf.id[acid]} has a new route'
-
