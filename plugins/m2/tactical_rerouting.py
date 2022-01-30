@@ -42,7 +42,6 @@ def shortest_path(G, origin, destination, mode):
         osmid_route = ox.shortest_path(G, origin_node, dest_node)
     return osmid_route
 
-#TODO check if savegraph as graphML is quicker, you dont need to assigne specific nodes and edges
 def read_graph(gpkg):
     print(f'loading {gpkg}')
     nodes = gp.read_file(gpkg, layer='nodes')
@@ -67,21 +66,33 @@ def read_graph(gpkg):
 
     return graph_dict
 
-def generate_stackcmd(new_nodeids, G, alt):
+def generate_stackcmd(
+        new_nodeids,
+        G,
+        alt,
+        droneid,
+        fplan_priority,
+        fplan_vehicle,
+        fp_landingLat,
+        fp_landingLon,
+
+
+
+):
     # Total Airspace Unc GPKG
 
     path_planner = PathPlanner(G, angle_cutoff=45)
     scenario = ScenarioMaker()
 
-    fplan_id = "D1"
+    fplan_id = droneid
     start_time = 0
-    fplan_priority = "4"
+    fplan_priority = str(fplan_priority)
     fplan_arrivaltime = "198"
-    fplan_vehicle = "MP20"
+    fplan_vehicle = fplan_vehicle
     operational_altitude = alt
 
-    fp_landingLat = 48.218146
-    fp_landingLon = 16.3151026
+    fp_landingLat = fp_landingLat
+    fp_landingLon = fp_landingLon
     fp_landingAlt = 0
 
     list_nodes_id = new_nodeids
@@ -188,7 +199,7 @@ class tactical_reroute(core.Entity):
         super().create(n)
         self.reroutes[-n:] = 0
         traf.reroutes = self.reroutes
-
+#TODO UPDATE the stack command generation to new version of everis
     @stack.command
     def rerouteovershoot(self, acid: 'acid'):
         ownship = traf
@@ -209,7 +220,7 @@ class tactical_reroute(core.Entity):
         ownship_type = ownship.type[acid]
 
         try:
-            new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts #TODO make sure TUD updates with cruise speeds as per emmanuel request
+            new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts
         except:
             new_fpgs = 12.8611 / kts #if drone type is not found default to 25 kts
 
@@ -218,18 +229,22 @@ class tactical_reroute(core.Entity):
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
             for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
+                stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
+            # Patch for descendcheck bug, delete last wpt.
+            stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             for i in list(zip(new_fplat,new_fplon)):
-                stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
+                stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
+            # Patch for descendcheck bug, delete last wpt.
+            stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.reroutes[acid] = self.reroutes[acid] + 1
         traf.reroutes = self.reroutes
@@ -248,22 +263,12 @@ class tactical_reroute(core.Entity):
         layerDirection = ownship.layerdirection[idxCurrentLayer][0]
         layerName = ownship.aclayername[acid]
 
-        geofences = tools.areafilter.basic_shapes
-        # geo_save_dict =
-        geofence_names = geofences.keys()
         temp_graph = graphs_dict[layerDirection]['graph'].copy()
 
 
-
-        for j in geofence_names:
-            # restructure the coordinates of the BS Poly shape to cast it into a shapely Polygon
-            coord_list = list(zip(geofences[j].coordinates[1::2],geofences[j].coordinates[0::2]))
-
-            values={}
-
-            #construct shapely Polygon object and add it to the multipolygon list
-            shapely_geofence = Polygon(coord_list)
-            intersections = list(graphs_dict[layerDirection]['idx_tree'].intersection(shapely_geofence.bounds))
+        for j in ownship.geoPoly:
+            values = {}
+            intersections = list(graphs_dict[layerDirection]['idx_tree'].intersection(j.bounds))
             list_intersecting_edges = [graphs_dict[layerDirection]['edges_rtree'][ii] for ii in intersections]
             for i in list_intersecting_edges:
                 values[i] = {'pesoL': 9999}
@@ -280,31 +285,32 @@ class tactical_reroute(core.Entity):
 
         ownship_type = ownship.type[acid]
         try:
-            new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts #TODO make sure TUD updates with cruise speeds as per emmanuel request
+            new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts
         except:
             new_fpgs = 12.8611 / kts #if drone type is not found default to 25 kts
 
-        #TODO figure out how to do turnspeeds.
         if ownship.alt[acid] /ft != new_fpalt:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
+            # Patch for descendcheck bug, delete last wpt.
+            stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt)}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid])}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
+            # Patch for descendcheck bug, delete last wpt.
+            stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.reroutes[acid] = self.reroutes[acid] + 1
         traf.reroutes = self.reroutes
 
         return True, f'GEOFENCE - {traf.id[acid]} has a new route'
 
-
-#TODO del last wpt due to bug 

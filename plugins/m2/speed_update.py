@@ -39,7 +39,7 @@ class speedUpdate(core.Entity):
 
     # Functions that need to be called periodically can be indicated to BlueSky
     # with the timed_function decorator
-    @core.timed_function(name='speedUpdate', dt=5)
+    @core.timed_function(name='speedUpdate', dt=1)
     def update(self):
         for i in traf.id:
             acid = traf.id2idx(i)
@@ -64,17 +64,22 @@ class speedUpdate(core.Entity):
             lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
             upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
 
-            if diff < -25:
+            if diff < -25 and iactwp+1 not in traf.turns[idxown] and traf.speedupdate[idxown] != True:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is speeding up")
                 #print(f'{traf.id[idxown]} too SLOW')
-            elif diff > 25:
+            elif diff > 25 and iactwp+1 not in traf.turns[idxown] and traf.speedupdate[idxown] != True:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
                 #print(f'{traf.id[idxown]} too FAST')
             elif abs(diff) < 15 and traf.speedupdate[idxown] == True:
+                stack.stack(f"{traf.id[idxown]} LNAV ON")
+                stack.stack(f"{traf.id[idxown]} VNAV ON")
+                stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
+                traf.speedupdate[idxown] = False
+            elif iactwp+1 in traf.turns[idxown] and traf.speedupdate[idxown] == True:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
