@@ -188,6 +188,9 @@ class checkState(core.Entity):
     def update(self):
         for i in traf.id:
             idx = traf.id2idx(i)
+            if traf.priority[idx] != 5:
+                # ingeofence checker:
+                routeval, acval = ingeoFence.checker(acid=idx)
 
             '''
             Ingeofence Plugin
@@ -224,11 +227,11 @@ class checkState(core.Entity):
             if overshoot:
                 # overshoot checker (only if there is a route and we are almost at destination):
                 if traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(traf.ap.route[idx].wpname):
+
                     dist = overshootcheck.calc_dist(idx)
                     val = overshootcheck.checker(idx, dist)
                     self.overshot[idx] = val
                     traf.overshot = self.overshot
-
             '''
             Etacheck Plugin
             This plugins calculates STA, ETA, ATD and ATA. ETA and STA is calculated by summing all route segments
@@ -301,6 +304,7 @@ class checkState(core.Entity):
                 stack.stack(f"{traf.id[idx]} DEL")
 
             traf.startDescend = self.startDescend
+
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):
