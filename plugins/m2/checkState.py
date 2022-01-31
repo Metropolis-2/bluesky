@@ -10,6 +10,7 @@ import rtree
 from plugins.m2.nodesToCommands_v2 import PathPlanner, ScenarioMaker
 
 # Import the global bluesky objects. Uncomment the ones you need
+import bluesky as bs
 from bluesky import core, stack, traf, sim, settings  # , navdb, sim, scr, tools
 from bluesky.tools.aero import ft, kts
 import plugins.m2.descendcheck as descendcheck
@@ -81,6 +82,7 @@ class checkState(core.Entity):
             self.ingeofence = np.array([], dtype=bool)
             self.acingeofence = np.array([], dtype=bool)
             self.geoPoly = None
+            self.geoPoly_vert = None
             self.geoDictOld = dict()
 
             #etacheck
@@ -98,6 +100,7 @@ class checkState(core.Entity):
         traf.ingeofence = self.ingeofence
         traf.acingeofence = self.acingeofence
         traf.geoPoly = self.geoPoly
+        traf.geoPoly_vert = self.geoPoly_vert
         traf.geoDictOld = self.geoDictOld
 
         #etacheck
@@ -171,6 +174,7 @@ class checkState(core.Entity):
             self.ingeofence = np.array([], dtype=bool)
             self.acingeofence = np.array([], dtype=bool)
             self.geoPoly = None
+            self.geoPoly_vert = None
             self.geoDictOld = dict()
 
         # update traf
@@ -181,6 +185,7 @@ class checkState(core.Entity):
         traf.startDescend = self.startDescend
         traf.geoPoly = self.geoPoly
         traf.geoDictOld = self.geoDictOld
+        traf.geoPoly_vert = self.geoPoly_vert
 
         self.reference_ac = []
 
@@ -204,9 +209,9 @@ class checkState(core.Entity):
                         # update old dict to ensure we only recreate the multipolygon if something changed
                         if self.geoDictOld != geofence_TUD.Geofence.geo_save_dict:
                             self.geoDictOld = copy.deepcopy(geofence_TUD.Geofence.geo_save_dict)
-                            self.geoPoly = ingeoFence.create_multipoly(geofences=geofence_TUD.Geofence.geo_save_dict)
+                            self.geoPoly, self.geoPoly_vert = ingeoFence.create_multipoly(geofences=geofence_TUD.Geofence.geo_save_dict)
 
-                        routeval, acval = ingeoFence.checker(acid=idx, multiGeofence=self.geoPoly)
+                        routeval, acval = ingeoFence.checker(acid=idx, multiGeofence=self.geoPoly, multiGeofence_vert=self.geoPoly_vert)
                         self.ingeofence[idx] = routeval
                         self.acingeofence[idx] = acval
 
