@@ -382,6 +382,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
+            ownship_route = traf.ap.route[acid]
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
@@ -391,6 +392,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
+            ownship_route = traf.ap.route[acid]
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
@@ -445,6 +447,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
+            ownship_route = traf.ap.route[acid]
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
@@ -454,6 +457,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
+            ownship_route = traf.ap.route[acid]
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
