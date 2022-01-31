@@ -29,6 +29,7 @@ overshoot = True
 etachecker = True
 speedupdate = True
 rerouting = True
+descendCheck = True
 
 ### Initialization function of your plugin. Do not change the name of this
 ### function, as it is the way BlueSky recognises this file as a plugin.
@@ -189,121 +190,119 @@ class checkState(core.Entity):
         for i in traf.id:
             idx = traf.id2idx(i)
             if traf.priority[idx] != 5:
-                # ingeofence checker:
-                routeval, acval = ingeoFence.checker(acid=idx)
+                '''
+                Ingeofence Plugin
+                This plugin checks if the current route of the aircraft interferes with a geofence.
+                If so, the drone is rerouted, except when the geofence surrounds the drone or when
+                the vertiport of the drone is in the geofence. If that is the case the drone ignores
+                the geofence.
+                '''
+                if ingeofence:
+                    # only run this code if there actually is a geofence somewhere and we are on the way
+                    if geofence_TUD.Geofence.geo_save_dict != dict() and traf.ap.route[idx].iactwp > 1:
 
-            '''
-            Ingeofence Plugin
-            This plugin checks if the current route of the aircraft interferes with a geofence.
-            If so, the drone is rerouted, except when the geofence surrounds the drone or when
-            the vertiport of the drone is in the geofence. If that is the case the drone ignores
-            the geofence.
-            '''
-            if ingeofence:
-                # only run this code if there actually is a geofence somewhere and we are on the way
-                if geofence_TUD.Geofence.geo_save_dict != dict() and traf.ap.route[idx].iactwp > 1:
+                        # update old dict to ensure we only recreate the multipolygon if something changed
+                        if self.geoDictOld != geofence_TUD.Geofence.geo_save_dict:
+                            self.geoDictOld = copy.deepcopy(geofence_TUD.Geofence.geo_save_dict)
+                            self.geoPoly = ingeoFence.create_multipoly(geofences=geofence_TUD.Geofence.geo_save_dict)
 
-                    # update old dict to ensure we only recreate the multipolygon if something changed
-                    if self.geoDictOld != geofence_TUD.Geofence.geo_save_dict:
-                        self.geoDictOld = copy.deepcopy(geofence_TUD.Geofence.geo_save_dict)
-                        self.geoPoly = ingeoFence.create_multipoly(geofences=geofence_TUD.Geofence.geo_save_dict)
+                        routeval, acval = ingeoFence.checker(acid=idx, multiGeofence=self.geoPoly)
+                        self.ingeofence[idx] = routeval
+                        self.acingeofence[idx] = acval
 
-                    routeval, acval = ingeoFence.checker(acid=idx, multiGeofence=self.geoPoly)
-                    self.ingeofence[idx] = routeval
-                    self.acingeofence[idx] = acval
+                        traf.ingeofence = self.ingeofence
+                        traf.acingeofence = self.acingeofence
+                        traf.geoPoly = self.geoPoly
+                        traf.geoDictOld = self.geoDictOld
 
-                    traf.ingeofence = self.ingeofence
-                    traf.acingeofence = self.acingeofence
-                    traf.geoPoly = self.geoPoly
-                    traf.geoDictOld = self.geoDictOld
+                '''
+                Overshoot Plugin
+                This plugin checks if the drone has overshot its destination. The plugin uses a simple logic,
+                when the distance between the drone and its final waypoint +50 meters increases
+                whilst the final waypoint is active, the destination is overshot. When overshot, the drone gets
+                rerouted in the reso 0 layer (multidirectional).
+                '''
+                if overshoot:
+                    # overshoot checker (only if there is a route and we are almost at destination):
+                    if traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(traf.ap.route[idx].wpname):
 
-            '''
-            Overshoot Plugin
-            This plugin checks if the drone has overshot its destination. The plugin uses a simple logic,
-            when the distance between the drone and its final waypoint +50 meters increases
-            whilst the final waypoint is active, the destination is overshot. When overshot, the drone gets
-            rerouted in the reso 0 layer (multidirectional).
-            '''
-            if overshoot:
-                # overshoot checker (only if there is a route and we are almost at destination):
-                if traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(traf.ap.route[idx].wpname):
+                        dist = overshootcheck.calc_dist(idx)
+                        val = overshootcheck.checker(idx, dist)
+                        self.overshot[idx] = val
+                        traf.overshot = self.overshot
+                '''
+                Etacheck Plugin
+                This plugins calculates STA, ETA, ATD and ATA. ETA and STA is calculated by summing all route segments
+                whilst adding additional delay for each turn, to account for acceleration and decelleration. ATA and
+                ATD are simply logged at the moment of activating the last and first waypoint respectively.
+                '''
+                if etachecker:
+                    acid = traf.id2idx(i)
+                    ac_route = traf.ap.route[acid]
+                    # Check if there is a route.
+                    if ac_route.iactwp != -1 and ac_route.nwp != 0:
 
-                    dist = overshootcheck.calc_dist(idx)
-                    val = overshootcheck.checker(idx, dist)
-                    self.overshot[idx] = val
-                    traf.overshot = self.overshot
-            '''
-            Etacheck Plugin
-            This plugins calculates STA, ETA, ATD and ATA. ETA and STA is calculated by summing all route segments
-            whilst adding additional delay for each turn, to account for acceleration and decelleration. ATA and
-            ATD are simply logged at the moment of activating the last and first waypoint respectively.
-            '''
-            if etachecker:
-                acid = traf.id2idx(i)
-                ac_route = traf.ap.route[acid]
-                # Check if there is a route.
-                if ac_route.iactwp != -1 and ac_route.nwp != 0:
+                        #First time calculation of the atd
+                        if self.sta[acid].atd == 0:
+                            self.sta[acid].atd = sim.utc.timestamp()
+                            self.sta[acid].atd_datetime = etacheck.secToDT(sim.utc.timestamp())
 
-                    #First time calculation of the atd
-                    if self.sta[acid].atd == 0:
-                        self.sta[acid].atd = sim.utc.timestamp()
-                        self.sta[acid].atd_datetime = etacheck.secToDT(sim.utc.timestamp())
+                        #First time the last waypoint gets active, the ATA is logged
+                        if ac_route.iactwp == ac_route.nwp - 1 and self.sta[acid].ata == 0:
+                            self.sta[acid].ata = sim.utc.timestamp()
+                            self.sta[acid].ata_datetime = etacheck.secToDT(sim.utc.timestamp())
 
-                    #First time the last waypoint gets active, the ATA is logged
-                    if ac_route.iactwp == ac_route.nwp - 1 and self.sta[acid].ata == 0:
-                        self.sta[acid].ata = sim.utc.timestamp()
-                        self.sta[acid].ata_datetime = etacheck.secToDT(sim.utc.timestamp())
+                        # First time calculation of STA
+                        if self.sta[acid].time == 0:
+                            self.sta[acid].time = etacheck.calc_eta(acid)
+                            self.sta[acid].sta_dt = etacheck.secToDT(self.sta[acid].sta_dt)
 
-                    # First time calculation of STA
-                    if self.sta[acid].time == 0:
-                        self.sta[acid].time = etacheck.calc_eta(acid)
-                        self.sta[acid].sta_dt = etacheck.secToDT(self.sta[acid].sta_dt)
+                        # Keep updating the ETA, until activation of last waypoint.
+                        if ac_route.iactwp < ac_route.nwp - 1:
+                            self.eta[acid] = etacheck.calc_eta(acid)
+                            sta = self.sta[acid].time
+                            eta = self.eta[acid]
+                            diff = sta - eta
+                            self.delayed[acid] = diff
 
-                    # Keep updating the ETA, until activation of last waypoint.
-                    if ac_route.iactwp < ac_route.nwp - 1:
-                        self.eta[acid] = etacheck.calc_eta(acid)
-                        sta = self.sta[acid].time
-                        eta = self.eta[acid]
-                        diff = sta - eta
-                        self.delayed[acid] = diff
+                        #update Traffic variables
+                        traf.orignwp = self.orignwp
+                        traf.sta = self.sta
+                        traf.eta = self.eta
+                        traf.delayed = self.delayed
 
-                    #update Traffic variables
-                    traf.orignwp = self.orignwp
-                    traf.sta = self.sta
-                    traf.eta = self.eta
-                    traf.delayed = self.delayed
+                '''
+                Speedupdate Plugin
+                This plugin updates the speed of the aircraft if there is a significant delay (i.e. large delta
+                between STA and ETA) according to the Etacheck Plugin
+                '''
+                if speedupdate:
+                    idx = traf.id2idx(i)
+                    ac_diff = traf.delayed[idx]
+                    ac_route = traf.ap.route[idx]
+                    iactwp = ac_route.iactwp
+                    if iactwp == ac_route.nwp - 2:
+                        continue
+                    if traf.resostrategy[idx] == "None":
+                        speed_update.setSpeed(idx, ac_diff)
 
-            '''
-            Speedupdate Plugin
-            This plugin updates the speed of the aircraft if there is a significant delay (i.e. large delta
-            between STA and ETA) according to the Etacheck Plugin
-            '''
-            if speedupdate:
-                idx = traf.id2idx(i)
-                ac_diff = traf.delayed[idx]
-                ac_route = traf.ap.route[idx]
-                iactwp = ac_route.iactwp
-                if iactwp == ac_route.nwp - 2:
-                    continue
-                if traf.resostrategy[idx] == "None":
-                    speed_update.setSpeed(idx, ac_diff)
-
-            # descend checker
-            # if for some reason the startDescend boolean is true, but the aircraft was not deleted,
-            # then delete the aircraft when it is below 1 ft
-            # Delete the last waypoint at 0ft and 0kts
-            if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
-                lastwpname = traf.ap.route[idx].wpname[-1]
-                stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
-                self.reference_ac.append(traf.id[idx])
+                # descend checker
+                # if for some reason the startDescend boolean is true, but the aircraft was not deleted,
+                # then delete the aircraft when it is below 1 ft
+                # Delete the last waypoint at 0ft and 0kts
+                if descendCheck:
+                    if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
+                        lastwpname = traf.ap.route[idx].wpname[-1]
+                        stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
+                        self.reference_ac.append(traf.id[idx])
 
 
-            if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
-                self.startDescend[idx] = descendcheck.checker(idx)
-            elif traf.alt[idx] < 1.0 * ft:
-                stack.stack(f"{traf.id[idx]} DEL")
+                    if not self.startDescend[idx] and not traf.loiter.loiterbool[idx] and traf.resostrategy[idx] == 'None':
+                        self.startDescend[idx] = descendcheck.checker(idx)
+                    elif traf.alt[idx] < 1.0 * ft:
+                        stack.stack(f"{traf.id[idx]} DEL")
 
-            traf.startDescend = self.startDescend
+                    traf.startDescend = self.startDescend
 
 
     @stack.command
