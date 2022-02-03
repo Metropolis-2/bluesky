@@ -1366,11 +1366,11 @@ class ScenarioMaker():
         middle_alt_index = int(len(alts)/2)
         operational_altitude = alts[middle_alt_index]
 
-        cre_text = f'CRE {drone_id} {uav} {lats[0]} {lons[0]} {qdr} {takeoff_altitude} 0\n'
+        #cre_text = f'CRE {drone_id} {uav} {lats[0]} {lons[0]} {qdr} {takeoff_altitude} 0\n'
 
-        lines.append('\n'+start_time_txt + cre_text)
-        priority_text = f'SETPRIORITY {drone_id} {priority}\n'
-        lines.append(start_time_txt + priority_text)
+        # lines.append('\n'+start_time_txt + cre_text)
+        # priority_text = f'SETPRIORITY {drone_id} {priority}\n'
+        # lines.append(start_time_txt + priority_text)
 
         setturns_text = f'SETTURNS {drone_id} '
         for i in turn_indexs:
@@ -1384,15 +1384,15 @@ class ScenarioMaker():
         setturnspds_text += '\n'
         lines.append(start_time_txt + setturnspds_text)
 
-        alt_text = f'ALT {drone_id} {operational_altitude}\n'
-        lines.append(start_time_txt + alt_text)
-
-        atalt1_text = f'{drone_id} ATALT {operational_altitude} SPD {drone_id} {cruise_speed}\n'
-        lines.append(start_time_txt + atalt1_text)
-        atalt2_text = f'{drone_id} ATALT {operational_altitude} LNAV {drone_id} ON\n'
-        lines.append(start_time_txt + atalt2_text)
-        atalt3_text = f'{drone_id} ATALT {operational_altitude} VNAV {drone_id} ON\n'
-        lines.append(start_time_txt + atalt3_text)
+        # alt_text = f'ALT {drone_id} {operational_altitude}\n'
+        # lines.append(start_time_txt + alt_text)
+        #
+        # atalt1_text = f'{drone_id} ATALT {operational_altitude} SPD {drone_id} {cruise_speed}\n'
+        # lines.append(start_time_txt + atalt1_text)
+        # atalt2_text = f'{drone_id} ATALT {operational_altitude} LNAV {drone_id} ON\n'
+        # lines.append(start_time_txt + atalt2_text)
+        # atalt3_text = f'{drone_id} ATALT {operational_altitude} VNAV {drone_id} ON\n'
+        # lines.append(start_time_txt + atalt3_text)
 
 
         wpt_txt = f'ADDWAYPOINTS {drone_id} '
@@ -1563,19 +1563,19 @@ class ScenarioMaker():
                     return
 
                 lines = self.Drone2Scn(drone_id, start_time, lats, lons, turnbool, alts, priority, sta, uav, int_angle_list, turn_indexs, turn_speeds)
-                if(not self.header_added):
-                    header_text0 = '00:00:00>CASMACHTHR 0\n'
-                    lines.insert(0, header_text0)
-                    header_text1 = '00:00:00>PAN 48.223775 16.337976\n'
-                    lines.insert(1,header_text1)
-                    header_text2 = '00:00:00>ZOOM 60'
-                    lines.insert(2, header_text2)
-
-                    self.header_added = True
+                # if(not self.header_added):
+                #     header_text0 = '00:00:00>CASMACHTHR 0\n'
+                #     lines.insert(0, header_text0)
+                #     header_text1 = '00:00:00>PAN 48.223775 16.337976\n'
+                #     lines.insert(1,header_text1)
+                #     header_text2 = '00:00:00>ZOOM 60'
+                #     lines.insert(2, header_text2)
+                #
+                #     self.header_added = True
 
                 f.write(''.join(lines))
 
-                #return lines
+                return lines
 
 class PathPlanner():
     ''' PathPlanner new entity object for BlueSky. '''

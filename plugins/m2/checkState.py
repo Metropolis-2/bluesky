@@ -615,13 +615,13 @@ if rerouting:
 
         lines = scenario.Dict2Scn('temp.scn', scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle, int_angle_list, turn_indexs, turn_speeds)
 
-        new_turns = np.where(turns)
+        #new_turns = np.where(turns)
         #int_angle_list = np.array(int_angle_list)[np.where(turns)]
         #turn_speeds = []
         #turnspds = ' '.join(map(str, turn_speeds))
-        turns = ' '.join(map(str, new_turns))
+        #turns = ' '.join(map(str, new_turns))
 
-        return lines[-1].lstrip('00:00:00>')
+        return lines #[-1].lstrip('00:00:00>')
 
     graphs_dict={}
     for i in graphs:
