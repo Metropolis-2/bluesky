@@ -42,7 +42,7 @@ class init_hybrid(core.Entity):
             stack.stack("casmachthr 0")
             stack.stack("PCALL STREETS")
             stack.stack("IMPL WINDSIM M2WIND")
-            stack.stack("SETM2WIND 3 180")
+            #stack.stack("SETM2WIND 3 180")
             stack.stack("LOADGEOJSON open_geofence id height")
             stack.stack("LOADGEOJSON bldg_geofence fid h")
             # stack.stack("STARTM2LOG")

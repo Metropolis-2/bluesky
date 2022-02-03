@@ -7,7 +7,7 @@ import geopandas as gp
 from pyproj import CRS
 import os
 import rtree
-from plugins.m2.nodesToCommands_v2 import PathPlanner, ScenarioMaker
+from plugins.routingTactical import PathPlanner, ScenarioMaker
 
 # Import the global bluesky objects. Uncomment the ones you need
 import bluesky as bs
@@ -548,7 +548,7 @@ if rerouting:
         # Total Airspace Unc GPKG
 
         path_planner = PathPlanner(G, angle_cutoff=45)
-        scenario = ScenarioMaker()
+        scenario = ScenarioMaker(logger=None)
 
         fplan_id = droneid
         start_time = 0
@@ -563,7 +563,7 @@ if rerouting:
 
         list_nodes_id = new_nodeids
 
-        lats, lons, turns, int_angle_list = path_planner.route(list_nodes_id)  # 1ºarg: route of node_ids
+        lats, lons, turns, turn_indexs, turn_speeds, int_angle_list, _ = path_planner.route(list_nodes_id)  # 1ºarg: route of node_ids
 
         alts = []
         while (len(alts) != len(lats)):
@@ -594,7 +594,7 @@ if rerouting:
         print("lons: {}".format(lons))
         print("alts: {}".format(alts))
         print("turns: {}".format(turns))
-        print("int_angle_list: {}".format(int_angle_list))
+#        print("int_angle_list: {}".format(int_angle_list))
 
         # Initialize scenario
         scenario_dict = dict()
@@ -613,8 +613,14 @@ if rerouting:
 
         print("scenario_dict: {}".format(scenario_dict))
 
-        lines = scenario.Dict2Scn(scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle,
-                                  int_angle_list)
+        lines = scenario.Dict2Scn('temp.scn', scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle, int_angle_list, turn_indexs, turn_speeds)
+
+        new_turns = np.where(turns)
+        #int_angle_list = np.array(int_angle_list)[np.where(turns)]
+        #turn_speeds = []
+        #turnspds = ' '.join(map(str, turn_speeds))
+        turns = ' '.join(map(str, new_turns))
+
         return lines[-1].lstrip('00:00:00>')
 
     graphs_dict={}
