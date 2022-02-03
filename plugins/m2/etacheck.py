@@ -119,4 +119,7 @@ def turnDelay(acid:'acid'):
 
 
 def secToDT(seconds):
-    return datetime.fromtimestamp(int(seconds)).strftime("%Y-%m-%d, %H:%M:%S")
+    try:
+        return datetime.fromtimestamp(int(seconds)).strftime("%Y-%m-%d, %H:%M:%S")
+    except:
+        return seconds

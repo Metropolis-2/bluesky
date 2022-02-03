@@ -1380,7 +1380,7 @@ class ScenarioMaker():
 
         setturnspds_text = f'SETTURNSPDS {drone_id} '
         for i in turn_speeds:
-            setturnspds_text += str(i) + " "
+            setturnspds_text += str(int(i)) + " "
         setturnspds_text += '\n'
         lines.append(start_time_txt + setturnspds_text)
 
