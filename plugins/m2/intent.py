@@ -44,9 +44,19 @@ class intent(core.Entity):
         
         # add intent to traffic make it available in the rest of bluesky and other plugins
         traf.intent = self.acintent
-        
 
-    # Functions that need to be called periodically can be indicated to BlueSky
+    def delete(self, idx):
+        super().delete(idx)
+        traf.intent = self.acintent
+
+
+    def reset(self):
+        ''' Reset area state when simulation is reset. '''
+        super().reset()
+        traf.intent = self.acintent
+        traf.swintent = True
+
+        # Functions that need to be called periodically can be indicated to BlueSky
     # with the timed_function decorator
     @core.timed_function(name='example', dt=settings.asas_dt/2)
     def update(self):
