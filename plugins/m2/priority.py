@@ -47,6 +47,12 @@ class priority(core.Entity):
         super().delete(idx)
         # update traf
         traf.priority = self.priority
+
+    def reset(self):
+        ''' Reset area state when simulation is reset. '''
+        super().reset()
+        # update traf
+        traf.priority = self.priority
         
     @stack.command
     def setpriority(self, acid: 'acid', prio):

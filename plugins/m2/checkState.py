@@ -25,11 +25,11 @@ import networkx as nx
 These switches give the option of turning on or off specific plugins.
 Set to False if plugin must be off.
 '''
-ingeofence = True
-overshoot = True
-etachecker = True
-speedupdate = True
-rerouting = True
+ingeofence = False
+overshoot = False
+etachecker = False
+speedupdate = False
+rerouting = False
 descendCheck = True
 
 ### Initialization function of your plugin. Do not change the name of this
@@ -167,16 +167,6 @@ class checkState(core.Entity):
     def reset(self):
         ''' Reset area state when simulation is reset. '''
         super().reset()
-        with self.settrafarrays():
-            self.startDescend = np.array([], dtype=bool)  # array of booleans to check if descend can start
-            self.overshot = np.array([], dtype=bool)
-            self.wptdist = np.array([])
-            self.ingeofence = np.array([], dtype=bool)
-            self.acingeofence = np.array([], dtype=bool)
-            self.geoPoly = None
-            self.geoPoly_vert = None
-            self.geoDictOld = dict()
-
         # update traf
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
@@ -296,7 +286,7 @@ class checkState(core.Entity):
                 # then delete the aircraft when it is below 1 ft
                 # Delete the last waypoint at 0ft and 0kts
                 if descendCheck:
-                    if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1:
+                    if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1 and not traf.loiter.loiterbool[idx]:
                         lastwpname = traf.ap.route[idx].wpname[-1]
                         stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
                         self.reference_ac.append(traf.id[idx])
