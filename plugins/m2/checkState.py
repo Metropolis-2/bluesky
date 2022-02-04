@@ -7,7 +7,7 @@ import geopandas as gp
 from pyproj import CRS
 import os
 import rtree
-from plugins.m2.nodesToCommands_v2 import PathPlanner, ScenarioMaker
+from plugins.routingTactical import PathPlanner, ScenarioMaker
 
 # Import the global bluesky objects. Uncomment the ones you need
 import bluesky as bs
@@ -368,11 +368,17 @@ class checkState(core.Entity):
         except:
             new_fpgs = 12.8611 / kts #if drone type is not found default to 25 kts
 
-        if ownship.alt[acid] /ft != new_fpalt:
+        if ownship.alt[acid] / ft != new_fpalt:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
+            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
+                                  fp_landingLat=final_point[0], fp_landingLon=final_point[1],
+                                  fplan_vehicle=ownship_type,
+                                  fplan_priority=ownship.priority[acid])
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[0]}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[1]}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[2]}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
@@ -382,7 +388,13 @@ class checkState(core.Entity):
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
+            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
+                                  fp_landingLat=final_point[0], fp_landingLon=final_point[1],
+                                  fplan_vehicle=ownship_type,
+                                  fplan_priority=ownship.priority[acid])
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[0]}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[1]}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[2]}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
@@ -391,6 +403,8 @@ class checkState(core.Entity):
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
+        self.sta[acid].time = 0
+        self.sta[acid].sta_dt = 0
         traf.sta = self.sta
 
         return True, f'OVERSHOT - {traf.id[acid]} has a new route'
@@ -437,7 +451,12 @@ class checkState(core.Entity):
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
+            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
+                              fp_landingLat=final_point[0], fp_landingLon=final_point[1], fplan_vehicle=ownship_type,
+                              fplan_priority=ownship.priority[acid])
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[0]}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[1]}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[2]}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
@@ -447,7 +466,12 @@ class checkState(core.Entity):
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],fp_landingLat=final_point[0],fp_landingLon=final_point[1],fplan_vehicle=ownship_type,fplan_priority=ownship.priority[acid])}')
+            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
+                              fp_landingLat=final_point[0], fp_landingLon=final_point[1], fplan_vehicle=ownship_type,
+                              fplan_priority=ownship.priority[acid])
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[0]}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[1]}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[2]}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
@@ -456,6 +480,8 @@ class checkState(core.Entity):
             stack.stack(f'DELWPT {ownship.id[acid]} {ownship_route.wpname[-1]}')
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
+        self.sta[acid].time = 0
+        self.sta[acid].sta_dt = 0
         traf.sta = self.sta
 
         return True, f'GEOFENCE - {traf.id[acid]} has a new route'
@@ -538,7 +564,7 @@ if rerouting:
         # Total Airspace Unc GPKG
 
         path_planner = PathPlanner(G, angle_cutoff=45)
-        scenario = ScenarioMaker()
+        scenario = ScenarioMaker(logger=None)
 
         fplan_id = droneid
         start_time = 0
@@ -553,7 +579,7 @@ if rerouting:
 
         list_nodes_id = new_nodeids
 
-        lats, lons, turns, int_angle_list = path_planner.route(list_nodes_id)  # 1ºarg: route of node_ids
+        lats, lons, turns, turn_indexs, turn_speeds, int_angle_list, _ = path_planner.route(list_nodes_id)  # 1ºarg: route of node_ids
 
         alts = []
         while (len(alts) != len(lats)):
@@ -584,7 +610,7 @@ if rerouting:
         print("lons: {}".format(lons))
         print("alts: {}".format(alts))
         print("turns: {}".format(turns))
-        print("int_angle_list: {}".format(int_angle_list))
+#        print("int_angle_list: {}".format(int_angle_list))
 
         # Initialize scenario
         scenario_dict = dict()
@@ -603,9 +629,17 @@ if rerouting:
 
         print("scenario_dict: {}".format(scenario_dict))
 
-        lines = scenario.Dict2Scn(scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle,
-                                  int_angle_list)
-        return lines[-1].lstrip('00:00:00>')
+        lines = scenario.Dict2Scn('temp.scn', scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle, int_angle_list, turn_indexs, turn_speeds)
+
+        #new_turns = np.where(turns)
+        #int_angle_list = np.array(int_angle_list)[np.where(turns)]
+        #turn_speeds = []
+        #turnspds = ' '.join(map(str, turn_speeds))
+        #turns = ' '.join(map(str, new_turns))
+
+        for i in range(len(lines)):
+            lines[i] = lines[i].lstrip("00:00:00>").rstrip(" \n")
+        return lines
 
     graphs_dict={}
     for i in graphs:
