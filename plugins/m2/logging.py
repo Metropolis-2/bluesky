@@ -66,21 +66,21 @@ class logging(core.Entity):
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
         self.loslog2 = datalog.crelog('LOSLOG2', None, losheader2)
-        self.ftlog = datalog.crelog('FTLOG', None, ftheader)
+        # self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
 
-        with self.settrafarrays():
-            self.spawntime = np.array([])
+        # with self.settrafarrays():
+        #     self.spawntime = np.array([])
 
     def create(self, n=1):
         super().create(n)
-        self.spawntime[-n:] = sim.simt
+        # self.spawntime[-n:] = sim.simt
 
     def delete(self, idx):
-        if traf.id[idx[0]] not in deleted_aircraft:
-            flighttime = sim.simt - self.spawntime[idx[0]]
-            self.ftlog.log(traf.id[idx[0]], flighttime)
-            deleted_aircraft.append(traf.id[idx[0]])
+        # if traf.id[idx[0]] not in deleted_aircraft:
+        #     flighttime = sim.simt - self.spawntime[idx[0]]
+        #     self.ftlog.log(traf.id[idx[0]], flighttime)
+        #     deleted_aircraft.append(traf.id[idx[0]])
         super().delete(idx)
 
 
@@ -91,7 +91,7 @@ class logging(core.Entity):
         self.prevlospairs = set()
         self.hybridlog = datalog.crelog('CONFLICTLOG', None, conheader)
         self.loslog2 = datalog.crelog('LOSLOG2', None, losheader2)
-        self.ftlog = datalog.crelog('FTLOG', None, ftheader)
+        # self.ftlog = datalog.crelog('FTLOG', None, ftheader)
         self.start = False
 
     @core.timed_function(name='logging', dt=settings.asas_dt, hook='postupdate')
@@ -99,7 +99,7 @@ class logging(core.Entity):
         if self.start == False:
             self.hybridlog.start()
             self.loslog2.start()
-            self.ftlog.start()
+            # self.ftlog.start()
             self.start = True
 
 
