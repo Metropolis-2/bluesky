@@ -27,8 +27,8 @@ Set to False if plugin must be off.
 '''
 ingeofence = False
 overshoot = False
-etachecker = False
-speedupdate = False
+etachecker = True
+speedupdate = True
 rerouting = False
 descendCheck = True
 
@@ -102,6 +102,7 @@ class checkState(core.Entity):
         traf.geoPoly = self.geoPoly
         traf.geoPoly_vert = self.geoPoly_vert
         traf.geoDictOld = self.geoDictOld
+        traf.startDescend = self.startDescend
 
         #etacheck
         traf.orignwp = self.orignwp
