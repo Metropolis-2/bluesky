@@ -18,27 +18,31 @@ def setSpeed(idxown, diff):
         # get the currect layers speed limits
         lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
         upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
+
         if not traf.speedupdate[idxown]:
-            if diff < -25 and iactwp+1 not in traf.turns[idxown]:
+            if diff < -25 and iactwp not in traf.turns[idxown] and iactwp+1 not in traf.turns[idxown]:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is speeding up")
-                #print(f'{traf.id[idxown]} too SLOW')
-            elif diff > 25 and iactwp+1 not in traf.turns[idxown]:
+            elif diff > 25 and iactwp not in traf.turns[idxown] and iactwp+1 not in traf.turns[idxown]:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
-                #print(f'{traf.id[idxown]} too FAST')
         else:
             if abs(diff) < 15:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
                 traf.speedupdate[idxown] = False
-            elif iactwp+1 in traf.turns[idxown]:
+            elif iactwp+1 in traf.turns[idxown] or iactwp in traf.turns[idxown]:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
+                traf.speedupdate[idxown] = False
+            elif traf.swvnav[idxown] and not traf.swvnavspd[idxown] and int(traf.gs[idxown]/kts)==19:
+                stack.stack(f"{traf.id[idxown]} LNAV ON")
+                stack.stack(f"{traf.id[idxown]} VNAV ON")
+                stack.stack(f"ECHO {traf.id[idxown]} 19kts bug")
                 traf.speedupdate[idxown] = False
