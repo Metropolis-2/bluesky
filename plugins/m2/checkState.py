@@ -343,6 +343,7 @@ class checkState(core.Entity):
             - turnid: one or more waypoint ids that are a turn
         '''
         self.turns[acid] = np.array(turnid)
+        self.turns[acid] = self.turns[acid] -1
         traf.turns = self.turns
         return True
 
