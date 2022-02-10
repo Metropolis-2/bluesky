@@ -83,9 +83,6 @@ class airspaceLayer(core.Entity):
 
     def reset(self):
         super().reset()
-        # add the airspacelayertype as new array per aircraft
-        with self.settrafarrays():
-            self.airspacelayertype = np.array([], dtype='S24')
         # update traf
         traf.aclayername = self.airspacelayertype
 

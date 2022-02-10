@@ -137,24 +137,6 @@ class flightphase(core.Entity):
     def reset(self):
         ''' Reset area state when simulation is reset. '''
         super().reset()
-        with self.settrafarrays():
-            self.flightphase = np.array([])
-            self.resostrategy = np.array([], dtype='S6')
-            self.resoidint = np.array([], dtype=object)
-            self.resoalt = np.array([])
-            self.resospd = np.array([])
-            self.resovs = np.array([])
-            self.recoveryspd = np.array([])
-            self.recoveryvs = np.array([])
-            self.resoHdgActive = np.array([], dtype=bool)
-            self.resoTasActive = np.array([], dtype=bool)
-            self.resoAltActive = np.array([], dtype=bool)
-            self.resoVsActive = np.array([], dtype=bool)
-            self.preresoroute = []
-            self.dtlookup = np.array([])
-            self.dtlookdown = np.array([])
-            self.speedupdate = np.array([])
-
         # update traf
         traf.flightphase = self.flightphase
         traf.resostrategy = self.resostrategy
