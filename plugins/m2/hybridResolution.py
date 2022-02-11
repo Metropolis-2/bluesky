@@ -126,7 +126,7 @@ class hybridResolution(ConflictResolution):
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
-                            newalt[idxown], newvs[idxown], newgs[idxown] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
+                            newalt[idxown], newvs[idxown], newgs[idxown], newalt[idxint], newvs[idxint], newgs[idxint] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
                             stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
                         else:
                             newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
@@ -141,7 +141,7 @@ class hybridResolution(ConflictResolution):
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
-                            newalt[idxown], newvs[idxown], newgs[idxown] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
+                            newalt[idxown], newvs[idxown], newgs[idxown], newalt[idxint], newvs[idxint], newgs[idxint] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
                             stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
                         else:
                             newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
@@ -164,7 +164,7 @@ class hybridResolution(ConflictResolution):
 
                 # ownship is climbing and intruder is climbing
                 elif fpown == 1 and fpint == 1:
-                    newvs[idxown] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
+                    newvs[idxown], newvs[idxint] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
                     stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
 
                 # ownship is climbing and intruder is descending
@@ -196,7 +196,7 @@ class hybridResolution(ConflictResolution):
 
                 # ownship is descending and intruder is descending
                 elif fpown == 2 and fpint == 2:
-                    newvs[idxown] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
+                    newvs[idxown], newvs[idxint] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
                     stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
                 else:
                     print("ERROR: THE FLIGHT PHASE HAS BEEN COMPUTED WORNGLY. CHECK THE flightphase PLUGIN ")
@@ -410,14 +410,22 @@ class hybridResolution(ConflictResolution):
 
                 elif traf.resostrategy[idx] == "RESO5":
                     # If it is safe to descend back to the cruising altitude, then do so!
-                    reso5probe = conflictProbe(ownship, intruder, idx, dtlook=traf.dtlookdown[idx],
-                                               targetVs=traf.perf.vsmin[idx]) #and conflictProbe(ownship, intruder, idx, targetGs=traf.recoveryspd[idx])
+                    if traf.ap.route[idx].wpalt[iwpid] - traf.alt[idx] > 0:  # then climbing
+                        reso5probe = conflictProbe(ownship, intruder, idx, dtlook=dtlookup, targetVs=vsMaxOwn)
+                    else:  # descending
+                        reso5probe = conflictProbe(ownship, intruder, idx, dtlook=dtlookdown, targetVs=vsMinOwn)
+                        
                     if not reso5probe:
                         traf.resostrategy[idx] = "None"
                         traf.cr.hdgactive[idx] = False
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                     else:
                         # keep flying the resolution altitude
                         traf.ap.alt[idx] = traf.resoalt[idx]

@@ -1,6 +1,6 @@
 import numpy as np
 
-from bluesky import traf  # , stack #, core #, settings, navdb, sim, scr, tools
+from bluesky import traf, tools, settings # , stack #, core #, settings, navdb, sim, scr, tools
 from bluesky.tools.aero import nm, ft, kts, fpm
 
 
@@ -139,16 +139,42 @@ def reso4(idxown):
 def reso5(idxown, idxint):
     'The Climb into resolution layer + speed strategy'
 
-    # call reso1 to get the correct resolution altitude and vs
-    resoalt, resovs = reso1(idxown)
+    hor_sep = tools.geo.kwikdist(traf.lat[idxown], traf.lon[idxown], traf.lat[idxint], traf.lon[idxint])
 
-    # call reso2 to compute the correct resolution spd
-    resospd = reso2(idxown, idxint, False)
+    if hor_sep > settings.asas_pzr:
+        # call reso1 to get the correct resolution altitude and vs
+        resoaltown, resovsown = reso1(idxown)
+
+        # call reso2 to compute the correct resolution spd
+        resospdown = reso2(idxown, idxint, False)
+
+        resovsint = traf.vs[idxint]
+        resoaltint = traf.alt[idxint]
+        resospdint = traf.gs[idxint]
+
+    else:
+        resovsint = 0
+        resoaltint = traf.alt[idxint]
+        resospdint = 0
+
+        # Set the resolution active in altitude and vertical speed.
+        traf.resoAltActive[idxint] = True
+        traf.resoVsActive[idxint] = True
+        # activate the spd asas channel
+        traf.resoTasActive[idxint] = True
+
+        resovsown = traf.vs[idxown]
+        resoaltown = traf.alt[idxown]
+        resospdown = traf.gs[idxown]
 
     # update the traf.resoname for ownship
     traf.resostrategy[idxown] = "RESO5"
 
-    return resoalt, resovs, resospd
+    # update the traf.resoname for ownship
+    traf.resostrategy[idxint] = "RESO5"
+
+
+    return resoaltown, resovsown, resospdown, resoaltint, resovsint, resospdint
 
 
 def reso6(idxown, fpown):
@@ -236,29 +262,35 @@ def reso7(idxown, fpown):
 def reso8(idxown, idxint, fpown):
     '''Velocity matching in the vertical direction'''
 
-    # update the resostrategy used by ownship
+    # update the resostrategy used by ownship and intruder
     traf.resostrategy[idxown] = "RESO8"
+    traf.resostrategy[idxint] = "RESO8"
 
     # Set the resolution active in altitude and vertical speed.
     traf.resoVsActive[idxown] = True
+    traf.resoVsActive[idxint] = True
 
-    # performance of the ownship
-    vsMinOwn = traf.perf.vsmin[idxown]
-    vsMaxOwn = traf.perf.vsmax[idxown]
-
-    # match the vertical speed of the intruder
-    resovsown = traf.vs[idxint]
-
-    # save it to traf
-    traf.resovs[idxown] = resovsown
-
-    # Make sure the resovsown can be achieved
-    if fpown == 1:
-        traf.recoveryvs[idxown] = vsMaxOwn
+    if fpown == 1 and traf.alt[idxown] > traf.alt[idxint]:
+        resovsint = traf.vs[idxown]
+        traf.resovs[idxint] = resovsint
+        resovsown = traf.vs[idxown]
+    elif fpown == 1 and traf.alt[idxown] < traf.alt[idxint]:
+        resovsown = traf.vs[idxint]
+        traf.resovs[idxown] = resovsown
+        resovsint = traf.vs[idxint]
+    elif fpown == 2 and traf.alt[idxown] > traf.alt[idxint]:
+        resovsown = traf.vs[idxint]
+        traf.resovs[idxown] = resovsown
+        resovsint = traf.vs[idxint]
+    elif fpown == 2 and traf.alt[idxown] < traf.alt[idxint]:
+        resovsint = traf.vs[idxown]
+        traf.resovs[idxint] = resovsint
+        resovsown = traf.vs[idxown]
     else:
-        traf.recoveryvs[idxown] = vsMinOwn
+        resovsown = traf.vs[idxown]
+        resovsint = traf.vs[idxint]
 
-    return resovsown
+    return resovsown, resovsint
 
 
 def reso9(idxown, idxint):
