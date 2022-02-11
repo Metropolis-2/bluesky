@@ -76,7 +76,7 @@ class Autopilot(Entity, replaceable=True):
             self.route = []
 
 
-        self.idxreached = []    # List indices of aircraft who have reached their active waypoint
+            self.reached = np.array([], dtype=bool)    # List indices of aircraft who have reached their active waypoint
 
     def create(self, n=1):
         super().create(n)
@@ -119,9 +119,11 @@ class Autopilot(Entity, replaceable=True):
         - Compute VNAV profile for this new leg
         """
         # List of indices of aircraft which have reached their active waypoint
-        self.idxreached = bs.traf.actwp.Reached(qdr, dist, bs.traf.actwp.flyby,
+        self.reached = bs.traf.actwp.Reached(qdr, dist, bs.traf.actwp.flyby,
                                        bs.traf.actwp.flyturn,bs.traf.actwp.turnrad,bs.traf.actwp.swlastwp)
-        for i in self.idxreached:
+        idxreached = np.where(self.reached)[0]
+        
+        for i in idxreached:
 
             # Save current wp speed for use on next leg when we pass this waypoint
             # VNAV speeds are always FROM-speeds, so we accelerate/decellerate at the waypoint

@@ -500,7 +500,7 @@ class Traffic(Entity):
         self.flst.log(
             acid,
             self.create_time[idx],
-            bs.sim.simt,
+            bs.sim.simt - self.create_time[idx],
             (self.distance2D[idx]),
             (self.distance3D[idx]),
             (self.distancealt[idx]),

@@ -99,7 +99,7 @@ class ActiveWaypoint(Entity, replaceable=True):
 
         # Check whether shift based dist is required, set closer than WP turn distance
         # Detect indices
-        swreached = np.where(bs.traf.swlnav * np.logical_or(away,np.logical_or(dist < self.turndist,circling)))[0]
+        swreached = bs.traf.swlnav * np.logical_or(away,np.logical_or(dist < self.turndist,circling))
 
         # Return indices for which condition is True/1.0 for a/c where we have reached waypoint
         return swreached
