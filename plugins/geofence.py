@@ -158,7 +158,7 @@ class Geofence(areafilter.Poly):
         edges_df_dict[i] = (row['u'], row['v'])
 
     # initialize numpy array that will contain all nodes currently in the geofence
-    edges_in_loiter_geofence = np.array([], dtype='i,i')
+    edges_in_loiter_geofence = np.array([], dtype='i8,i8')
 
     def __init__(self, name, coordinates, top=999999, bottom=-999999):
         super().__init__(name, coordinates, top=top, bottom=bottom)
@@ -279,7 +279,7 @@ class Geofence(areafilter.Poly):
 
         # check the nearest edges to the polygon
         intersecting_rtree = list(cls.edges_df_rtree.intersection(poly_bounds))
-        intersecting_edges = np.array([cls.edges_df_dict[i] for i in intersecting_rtree], dtype='i,i')
+        intersecting_edges = np.array([cls.edges_df_dict[i] for i in intersecting_rtree], dtype='i8,i8')
 
         if update == 'add':
             # concate points inside to class variable nodes_in_geofence but only keep unique values
