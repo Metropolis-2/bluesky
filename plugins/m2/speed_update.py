@@ -19,7 +19,7 @@ def setSpeed(idxown, diff):
         lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
         upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
 
-        if not traf.speedupdate[idxown]:
+        if not traf.speedupdate[idxown] and iactwp!=np.argmax(ac_route.wpname) and iactwp!=np.argmax(ac_route.wpname)-1:
             if diff < -25 and iactwp not in traf.turns[idxown] and iactwp+1 not in traf.turns[idxown]:
                 traf.speedupdate[idxown] = True
                 stack.stack(f"SPD {traf.id[idxown]} {upperSpdLimit}")
@@ -46,3 +46,9 @@ def setSpeed(idxown, diff):
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} 19kts bug")
                 traf.speedupdate[idxown] = False
+
+        if traf.speedupdate[idxown] and iactwp == np.argmax(ac_route.wpname) or iactwp == np.argmax(ac_route.wpname)-1:
+            stack.stack(f"{traf.id[idxown]} LNAV ON")
+            stack.stack(f"{traf.id[idxown]} VNAV ON")
+            stack.stack(f"ECHO {traf.id[idxown]} close to destination, back to wpt speed")
+            traf.speedupdate[idxown] = False
