@@ -107,56 +107,56 @@ class hybridResolution(ConflictResolution):
                 if fpown == 0 and fpint == 0:
                     if rlayerown:
                         newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                        stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                        # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
                             newalt[idxown], newvs[idxown] = rs.reso1(idxown)  # use the "climb into resolution layer" strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso1: climb into resolution layer strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso1: climb into resolution layer strategy")
                         else:
                             newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
 
 
                 # ownship is cruising and intruder is climbing
                 elif fpown == 0 and fpint == 1:
                     if rlayerown:
                         newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                        stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                        # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
                             newalt[idxown], newvs[idxown], newgs[idxown], newalt[idxint], newvs[idxint], newgs[idxint] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
                         else:
                             newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
 
 
                 # ownship is cruising and intruder is descending
                 elif fpown == 0 and fpint == 2:
                     if rlayerown:
                         newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                        stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                        # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
                             newalt[idxown], newvs[idxown], newgs[idxown], newalt[idxint], newvs[idxint], newgs[idxint] = rs.reso5(idxown, idxint)  # use the climb into resolution layer + speed resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso5: climb into resolution layer + speed resolution strategy")
                         else:
                             newgs[idxown] = rs.reso2(idxown, idxint)  # use the speed resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso2: speed strategy")
 
                 # ownship is climbing and intruder is cruising
                 elif fpown == 1 and fpint == 0:
                     if rlayerown:
                         newgs[idxown], newvs[idxown], newalt[idxown] = rs.reso3(idxown, fpown)  # Hover in the resolution layer strategy
-                        stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso3: hover in the resolution layer strategy")
+                        # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso3: hover in the resolution layer strategy")
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookup[idxown],
                                              targetVs=traf.perf.vsmax[idxown]):
                             newgs[idxown], newvs[idxown], newalt[idxown] = rs.reso6(idxown, fpown)  # use the climb into resolution layer + hover resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso6: climb into resolution layer + hover resolution strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso6: climb into resolution layer + hover resolution strategy")
                         else:
                             newalt[idxown], traf.cr.altactive[idxown] = rs.reso4(idxown)  # temporarily level off strategy
                             # TODO
@@ -165,7 +165,7 @@ class hybridResolution(ConflictResolution):
                 # ownship is climbing and intruder is climbing
                 elif fpown == 1 and fpint == 1:
                     newvs[idxown], newvs[idxint] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
-                    stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
+                    # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
 
                 # ownship is climbing and intruder is descending
                 elif fpown == 1 and fpint == 2:
@@ -177,12 +177,12 @@ class hybridResolution(ConflictResolution):
                 elif fpown == 2 and fpint == 0:
                     if rlayerown:
                         newgs[idxown], newvs[idxown], newalt[idxown] = rs.reso3(idxown, fpown)  # Hover in the resolution layer strategy
-                        stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso3: hover in the resolution layer strategy")
+                        # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso3: hover in the resolution layer strategy")
                     else:
                         if not conflictProbe(ownship, intruder, idxown, idxint, dtlook=traf.dtlookdown[idxown],
                                              targetVs=traf.perf.vsmin[idxown]):
                             newgs[idxown], newvs[idxown], newalt[idxown] = rs.reso7(idxown, fpown)  # use the descend into resolution layer + hover resolution strategy
-                            stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso7: descend into resolution layer + hover resolution strategy")
+                            # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso7: descend into resolution layer + hover resolution strategy")
                         else:
                             newalt[idxown], traf.cr.altactive[idxown] = rs.reso4(idxown)  # temporarily level off strategy
                             # TODO
@@ -197,7 +197,7 @@ class hybridResolution(ConflictResolution):
                 # ownship is descending and intruder is descending
                 elif fpown == 2 and fpint == 2:
                     newvs[idxown], newvs[idxint] = rs.reso8(idxown, idxint, fpown)  # velocity matching in the vertical direction
-                    stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
+                    # stack.stack(f"ECHO {traf.id[idxown]} is resolving conflict with {traf.id[idxint]} using reso8: velocity matching in the vertical direction")
                 else:
                     print("ERROR: THE FLIGHT PHASE HAS BEEN COMPUTED WORNGLY. CHECK THE flightphase PLUGIN ")
 
@@ -209,7 +209,7 @@ class hybridResolution(ConflictResolution):
                     traf.resoidint[confidxs[i]].append(traf.id[confidxs[0]])
 
                 newgs[confidxs[i]], newvs[confidxs[i]], newalt[confidxs[i]] = rs.reso9(confidxs[i], confidxs[0])
-            stack.stack(f"ECHO {' & '.join(list(map(traf.id.__getitem__, confidxs[1:])))} are resolving conflict with {traf.id[confidxs[0]]} using reso9: multi aircraft conflict")
+            # stack.stack(f"ECHO {' & '.join(list(map(traf.id.__getitem__, confidxs[1:])))} are resolving conflict with {traf.id[confidxs[0]]} using reso9: multi aircraft conflict")
 
             ################### END CR Strategy Switch ###################
 
@@ -299,7 +299,7 @@ class hybridResolution(ConflictResolution):
                 if (traf.resostrategy[idx1] == "RESO6" or traf.resostrategy[idx1] == "RESO7") and idx1Resolves:
                     iwpid = traf.ap.route[idx1].findact(idx1)
                     # detremine if continuing the vertical climb/descend is ok
-                    if traf.ap.route[idx1].wpalt[iwpid] - traf.alt[idx1] > 0:  # then climbing
+                    if iwpid != -1 and traf.ap.route[idx1].wpalt[iwpid] - traf.alt[idx1] > 0:  # then climbing
                         reso67probe = conflictProbe(ownship, intruder, idx1, dtlook=traf.dtlookup[idx1],
                                                     targetVs=traf.perf.vsmax[idx1])
                     else:  # descending
@@ -364,6 +364,13 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+
+                        # If the drone was hovering, it should continue to climb/descend
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                     else:
                         # keep flying the resolution altitude
                         traf.ap.alt[idx] = traf.resoalt[idx]
@@ -378,6 +385,13 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+
+                        # If the drone was hovering, it should continue to climb/descend
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
 
                 elif traf.resostrategy[idx] == "RESO3" or traf.resostrategy[idx] == "RESO6" or traf.resostrategy[
                     idx] == "RESO7":
@@ -414,7 +428,7 @@ class hybridResolution(ConflictResolution):
                         reso5probe = conflictProbe(ownship, intruder, idx, dtlook=dtlookup, targetVs=vsMaxOwn)
                     else:  # descending
                         reso5probe = conflictProbe(ownship, intruder, idx, dtlook=dtlookdown, targetVs=vsMinOwn)
-                        
+
                     if not reso5probe:
                         traf.resostrategy[idx] = "None"
                         traf.cr.hdgactive[idx] = False
@@ -442,6 +456,13 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+
+                        # If the drone was hovering, it should continue to climb/descend
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                     else:
                         traf.ap.vs[idx] = traf.resovs[idx]
 
@@ -452,6 +473,13 @@ class hybridResolution(ConflictResolution):
                         traf.cr.tasactive[idx] = False
                         traf.cr.altactive[idx] = False
                         traf.cr.vsactive[idx] = False
+
+                        # If the drone was hovering, it should continue to climb/descend
+                        stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft}")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} LNAV {traf.id[idx]} ON")
+                        stack.stack(
+                            f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iwpid] / ft} VNAV {traf.id[idx]} ON")
                 else:
                     traf.resostrategy[idx] = "None"
                     traf.cr.hdgactive[idx] = False

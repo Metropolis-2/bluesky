@@ -15,28 +15,18 @@ def checker(idx):
 
         # Determine the lat lon of the last and the second last waypoints. the second last waypoint is the ToD
         sec_last_wptidx = traf.ap.route[idx].nwp-2
-        sec_last_wpt_lat = traf.ap.route[idx].wplat[sec_last_wptidx]
-        sec_last_wpt_lon = traf.ap.route[idx].wplon[sec_last_wptidx]
 
-        # Depending on the wind direction the drone should slow down earlier or later
-        if round(traf.gs[idx]) == round(traf.tas[idx]):
-            deltadist = 0.1115982
-        elif round(traf.gs[idx]) > round(traf.tas[idx]):
-            deltadist = 2*0.1115982
-        else:
-            deltadist = 0.1115982/2
-
-        # If all the conditions are satisfied, then use stack commands to descend this aircraft
         if iwpid > sec_last_wptidx and not conflictProbe(traf, traf, idx, dtlook=traf.dtlookdown[idx],
                                          targetVs=traf.perf.vsmin[idx]):
 
             stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
             # call the stacks
-            stack.stack(f"{traf.id[idx]} LNAV ON")
-            stack.stack(f"{traf.id[idx]} VNAV ON")
-            stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} {deltadist} {traf.id[idx]} VNAV OFF")
-            stack.stack(f"ATDIST {traf.id[idx]} {sec_last_wpt_lat} {sec_last_wpt_lon} {deltadist} SPD {traf.id[idx]} 0")
-            stack.stack(f"ATSPD {traf.id[idx]} 0 ALT {traf.id[idx]} 0")
+            landing = not traf.swlnav[idx] and traf.actwp.swlastwp[idx]
+
+            if landing:
+                traf.selspd[idx] = 0.0
+                traf.selalt[idx] = 0.0
+
             stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
 
             # update startDescend

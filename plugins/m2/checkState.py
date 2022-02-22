@@ -25,7 +25,7 @@ import networkx as nx
 These switches give the option of turning on or off specific plugins.
 Set to False if plugin must be off.
 '''
-ingeofence = False
+ingeofence = True
 overshoot = True
 etachecker = True
 speedupdate = True
@@ -288,6 +288,7 @@ class checkState(core.Entity):
                 # Delete the last waypoint at 0ft and 0kts
                 if descendCheck:
                     if traf.id[idx] not in self.reference_ac and traf.ap.route[idx].iactwp > -1 and not traf.loiter.loiterbool[idx]:
+                        traf.ap.route[idx].wpspd[-2] = 1.0
                         lastwpname = traf.ap.route[idx].wpname[-1]
                         stack.stack(f"DELWPT {traf.id[idx]} {lastwpname}")
                         self.reference_ac.append(traf.id[idx])
@@ -382,10 +383,11 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[1]}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[2]}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} LNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
+            self.startDescend[acid] = False
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
@@ -401,6 +403,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
+            self.startDescend[acid] = False
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
         self.sta[acid].time = 0
@@ -462,6 +465,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
+            self.startDescend[acid] = False
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
@@ -476,6 +480,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
+            self.startDescend[acid] = False
 
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
