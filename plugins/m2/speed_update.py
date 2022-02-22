@@ -14,10 +14,11 @@ def setSpeed(idxown, diff):
     nameCurrentLayer = traf.aclayername[idxown]
     ac_route = traf.ap.route[idxown]
     iactwp = ac_route.iactwp
+    lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0] / kts
+    upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0] / kts
+
     if re.match('cruising.+',nameCurrentLayer) is not None and traf.flightphase[idxown] == 0 and iactwp > 0:
         # get the currect layers speed limits
-        lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]/kts
-        upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]/kts
 
         if not traf.speedupdate[idxown] and iactwp!=np.argmax(ac_route.wpname) and iactwp!=np.argmax(ac_route.wpname)-1:
             if diff < -25 and iactwp not in traf.turns[idxown] and iactwp+1 not in traf.turns[idxown]:
@@ -52,3 +53,18 @@ def setSpeed(idxown, diff):
             stack.stack(f"{traf.id[idxown]} VNAV ON")
             stack.stack(f"ECHO {traf.id[idxown]} close to destination, back to wpt speed")
             traf.speedupdate[idxown] = False
+
+
+    iactwp = traf.ap.route[idxown].iactwp
+    wplat = traf.ap.route[idxown].wplat[iactwp]
+    wplon = traf.ap.route[idxown].wplon[iactwp]
+    aclat = traf.lat[idxown]
+    aclon = traf.lon[idxown]
+    bearing, _ = tools.geo.qdrdist(aclat,aclon,wplat,wplon)
+
+    if re.match('reso_0', nameCurrentLayer) is not None and traf.gs[idxown]==0 and traf.vs[idxown]==0:
+        stack.stack(f"{traf.id[idxown]} LNAV ON")
+        stack.stack(f"SPD {traf.id[idxown]} 5")
+    elif re.match('reso_0', nameCurrentLayer) is not None and traf.gs[idxown] == upperSpdLimit and traf.vs[idxown] == 0 and bearing > 90:
+        stack.stack(f"{traf.id[idxown]} LNAV ON")
+        stack.stack(f"SPD {traf.id[idxown]} 5")
