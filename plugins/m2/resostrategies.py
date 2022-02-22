@@ -1,6 +1,6 @@
 import numpy as np
 
-from bluesky import traf  # , stack #, core #, settings, navdb, sim, scr, tools
+from bluesky import traf, tools, settings # , stack #, core #, settings, navdb, sim, scr, tools
 from bluesky.tools.aero import nm, ft, kts, fpm
 
 
@@ -139,16 +139,42 @@ def reso4(idxown):
 def reso5(idxown, idxint):
     'The Climb into resolution layer + speed strategy'
 
-    # call reso1 to get the correct resolution altitude and vs
-    resoalt, resovs = reso1(idxown)
+    hor_sep = tools.geo.kwikdist(traf.lat[idxown], traf.lon[idxown], traf.lat[idxint], traf.lon[idxint])
 
-    # call reso2 to compute the correct resolution spd
-    resospd = reso2(idxown, idxint, False)
+    if hor_sep > settings.asas_pzr:
+        # call reso1 to get the correct resolution altitude and vs
+        resoaltown, resovsown = reso1(idxown)
+
+        # call reso2 to compute the correct resolution spd
+        resospdown = reso2(idxown, idxint, False)
+
+        resovsint = traf.vs[idxint]
+        resoaltint = traf.alt[idxint]
+        resospdint = traf.gs[idxint]
+
+    else:
+        resovsint = 0
+        resoaltint = traf.alt[idxint]
+        resospdint = 0
+
+        # Set the resolution active in altitude and vertical speed.
+        traf.resoAltActive[idxint] = True
+        traf.resoVsActive[idxint] = True
+        # activate the spd asas channel
+        traf.resoTasActive[idxint] = True
+
+        resovsown = traf.vs[idxown]
+        resoaltown = traf.alt[idxown]
+        resospdown = traf.gs[idxown]
 
     # update the traf.resoname for ownship
     traf.resostrategy[idxown] = "RESO5"
 
-    return resoalt, resovs, resospd
+    # update the traf.resoname for ownship
+    traf.resostrategy[idxint] = "RESO5"
+
+
+    return resoaltown, resovsown, resospdown, resoaltint, resovsint, resospdint
 
 
 def reso6(idxown, fpown):
@@ -236,29 +262,41 @@ def reso7(idxown, fpown):
 def reso8(idxown, idxint, fpown):
     '''Velocity matching in the vertical direction'''
 
-    # update the resostrategy used by ownship
+    # update the resostrategy used by ownship and intruder
     traf.resostrategy[idxown] = "RESO8"
-
-    # Set the resolution active in altitude and vertical speed.
     traf.resoVsActive[idxown] = True
 
-    # performance of the ownship
-    vsMinOwn = traf.perf.vsmin[idxown]
-    vsMaxOwn = traf.perf.vsmax[idxown]
 
-    # match the vertical speed of the intruder
+    # Set the resolution active in altitude and vertical speed.
+    # traf.resostrategy[idxint] = "RESO8"
+    # traf.resoVsActive[idxint] = True
+
+    # if fpown == 1 and traf.alt[idxown] > traf.alt[idxint]:
+    #     resovsint = traf.vs[idxown]/2
+    #     traf.resovs[idxint] = resovsint
+    #     resovsown = traf.vs[idxown]
+    # elif fpown == 1 and traf.alt[idxown] < traf.alt[idxint]:
+    #     resovsown = traf.vs[idxint]/2
+    #     traf.resovs[idxown] = resovsown
+    #     resovsint = traf.vs[idxint]
+    # elif fpown == 2 and traf.alt[idxown] > traf.alt[idxint]:
+    #     resovsown = traf.vs[idxint]/2
+    #     traf.resovs[idxown] = resovsown
+    #     resovsint = traf.vs[idxint]
+    # elif fpown == 2 and traf.alt[idxown] < traf.alt[idxint]:
+    #     resovsint = traf.vs[idxown]/2
+    #     traf.resovs[idxint] = resovsint
+    #     resovsown = traf.vs[idxown]
+    # else:
+    #     resovsown = traf.vs[idxown]
+    #     resovsint = traf.vs[idxint]
+
     resovsown = traf.vs[idxint]
-
-    # save it to traf
     traf.resovs[idxown] = resovsown
+    resovsint = traf.vs[idxint]
 
-    # Make sure the resovsown can be achieved
-    if fpown == 1:
-        traf.recoveryvs[idxown] = vsMaxOwn
-    else:
-        traf.recoveryvs[idxown] = vsMinOwn
 
-    return resovsown
+    return resovsown, resovsint
 
 
 def reso9(idxown, idxint):
@@ -266,45 +304,70 @@ def reso9(idxown, idxint):
     traf.resostrategy[idxown] = "RESO9"
 
     if traf.flightphase[idxown] == 0:
-        # activate the spd asas channel
-        traf.resoTasActive[idxown] = True
+        if traf.flightphase[idxint] == 0 or traf.aclayername[idxown].rfind('reso'):
+            # activate the spd asas channel
+            traf.resoTasActive[idxown] = True
 
-        # Determine the layer index of the current layer of ownship
-        idxCurrentLayer = np.where(traf.layernames == traf.aclayername[idxown])[0]
+            # Determine the layer index of the current layer of ownship
+            idxCurrentLayer = np.where(traf.layernames == traf.aclayername[idxown])[0]
 
-        # get the currect layers speed limits
-        lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]
-        upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]
+            # get the currect layers speed limits
+            lowerSpdLimit = traf.layerLowerSpd[idxCurrentLayer][0]
+            upperSpdLimit = traf.layerUpperSpd[idxCurrentLayer][0]
 
-        # the current velocity ground speed vector of ownship and intruder
-        # needed for velocity matching
-        ownvector = np.array([traf.gseast[idxown], traf.gsnorth[idxown]])
-        intvector = np.array([traf.gseast[idxint], traf.gsnorth[idxint]])
+            # the current velocity ground speed vector of ownship and intruder
+            # needed for velocity matching
+            ownvector = np.array([traf.gseast[idxown], traf.gsnorth[idxown]])
+            intvector = np.array([traf.gseast[idxint], traf.gsnorth[idxint]])
 
-        # save the current ownship spd for recovery after conflict
-        traf.recoveryspd[idxown] = traf.ap.tas[idxown]
+            # save the current ownship spd for recovery after conflict
+            traf.recoveryspd[idxown] = traf.ap.tas[idxown]
 
-        if np.linalg.norm(
-                ownvector) > 0:  # avoid division by zero --> happens only if ownship is hovering in resolution layer
-            resospd = np.dot(intvector, ownvector) / np.linalg.norm(ownvector)
+            if np.linalg.norm(
+                    ownvector) > 0:  # avoid division by zero --> happens only if ownship is hovering in resolution layer
+                resospd = np.dot(intvector, ownvector) / np.linalg.norm(ownvector)
+            else:
+                resospd = lowerSpdLimit + 0.5
+
+            if lowerSpdLimit <= resospd <= upperSpdLimit:
+                traf.resospd[idxown] = resospd
+            elif abs(lowerSpdLimit - resospd) < abs(upperSpdLimit - resospd):
+                resospd = lowerSpdLimit
+                traf.resospd[idxown] = resospd
+            else:
+                resospd = upperSpdLimit
+                traf.resospd[idxown] = resospd
+
+            traf.resospd[idxown] = resospd
+            # Cruising aircraft should remain level
+            resovs = 0
+            resoalt = traf.alt[idxown]
+
+            return resospd, resovs, resoalt
         else:
-            resospd = lowerSpdLimit + 0.5
+            # activate the spd and vs asas channel
+            traf.resoTasActive[idxown] = True
+            traf.resoVsActive[idxown] = True
+            traf.resoAltActive[
+                idxown] = True  # needed to make sure that it hovers exactly at the lower alt of resolution layer
 
-        if lowerSpdLimit <= resospd <= upperSpdLimit:
-            traf.resospd[idxown] = resospd
-        elif abs(lowerSpdLimit - resospd) < abs(upperSpdLimit - resospd):
-            resospd = lowerSpdLimit
-            traf.resospd[idxown] = resospd
-        else:
-            resospd = upperSpdLimit
-            traf.resospd[idxown] = resospd
+            # determine the hover altitude --> the lower alt of the current (resolution) layer
+            idxCurrentLayer = np.where(traf.layernames == traf.aclayername[idxown])[0]
+            resoalt = traf.layerLowerAlt[idxCurrentLayer + 1][0]
 
-        traf.resospd[idxown] = resospd
-        # Cruising aircraft should remain level
-        resovs = 0
-        resoalt = traf.alt[idxown]
+            # Make the ownship hover
+            resospd = 0.0
 
-        return resospd, resovs, resoalt
+            # Determine the initial vertical speed during this resolution. Final vertical speed when resoalt is achived is 0.0 m/s
+            resovs = 0.0 if abs(traf.alt[idxown] - resoalt) < abs(traf.layerHeight - traf.cd.hpz[idxown]) else \
+                traf.perf.vsmin[idxown]
+
+            # Set the traffic variables
+            traf.resospd[idxown] = resospd
+            traf.resovs[idxown] = resovs
+            traf.resoalt[idxown] = resoalt
+
+            return resospd, resovs, resoalt
 
     else:
         # activate the spd and vs asas channel
@@ -321,14 +384,14 @@ def reso9(idxown, idxint):
 
             # Determine the initial vertical speed during this resolution. Final vertical speed when resoalt is achived is 0.0 m/s
             resovs = 0.0 if abs(traf.alt[idxown] - resoalt) < abs(traf.layerHeight - traf.cd.hpz[idxown]) else \
-            traf.perf.vsmin[idxown]
+                traf.perf.vsmin[idxown]
 
         else:
             resoalt = traf.layerLowerAlt[idxCurrentLayer + 1][0]
 
             # Determine the initial vertical speed during this resolution. Final vertical speed when resoalt is achived is 0.0 m/s
             resovs = 0.0 if abs(traf.alt[idxown] - resoalt) < abs(traf.layerHeight - traf.cd.hpz[idxown]) else \
-            traf.perf.vsmin[idxown]
+                traf.perf.vsmax[idxown]
 
         # Climbing/descending drone should not move horizontally
         resospd = 0.0
