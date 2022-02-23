@@ -24,7 +24,7 @@ def calc_dist(acid: 'acid'):
 
 
 def checker(acid: 'acid', dist):
-    if dist is not None and dist-50 > traf.wptdist[acid]:
+    if dist is not None and dist > traf.wptdist[acid] and dist > 50:
         val = True
         stack.stack(f'REROUTEOVERSHOOT {traf.id[acid]}')
         traf.wptdist[acid] = 99999

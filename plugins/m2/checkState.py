@@ -281,8 +281,6 @@ class checkState(core.Entity):
                     ac_diff = traf.delayed[idx]
                     ac_route = traf.ap.route[idx]
                     iactwp = ac_route.iactwp
-                    if iactwp == ac_route.nwp - 2:
-                        continue
                     if traf.resostrategy[idx] == "None" and iactwp!=-1:
                         speed_update.setSpeed(idx, ac_diff)
 
@@ -360,52 +358,31 @@ class checkState(core.Entity):
         ownship_route = traf.ap.route[acid]
         last_wpidx = np.argmax(ownship_route.wpname)
 
-        initial_point = (ownship.lat[acid], ownship.lon[acid])
         final_point = (ownship_route.wplat[last_wpidx], ownship_route.wplon[last_wpidx])
-        new_nodeids = shortest_path(
-            graphs_dict['multi']['graph'],
-            initial_point, final_point, True)
-
-        temp_graph = graphs_dict['multi']['graph'].copy()
         new_fpalt = 30
-        ownship_type = ownship.type[acid]
 
-        try:
-            new_fpgs = aircraft[ownship_type]['envelop']['v_max'] / kts
-        except:
-            new_fpgs = 12.8611 / kts  # if drone type is not found default to 25 kts
-
+        new_fpgs = 10
         if ownship.alt[acid] / ft != new_fpalt:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ALT {ownship.id[acid]} {new_fpalt}')
-            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
-                                  fp_landingLat=final_point[0], fp_landingLon=final_point[1],
-                                  fplan_vehicle=ownship_type,
-                                  fplan_priority=ownship.priority[acid])
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[0]}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[1]}')
-            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} {l[2]}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} 0 {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} LNAV {ownship.id[acid]} ON')
-            stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
-            # Patch for descendcheck bug, delete last wpt.
+           #stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
+        # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
             self.startDescend[acid] = False
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
-            l = generate_stackcmd(new_nodeids=new_nodeids, G=temp_graph, alt=new_fpalt, droneid=ownship.id[acid],
-                                  fp_landingLat=final_point[0], fp_landingLon=final_point[1],
-                                  fplan_vehicle=ownship_type,
-                                  fplan_priority=ownship.priority[acid])
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[0]}')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[1]}')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 {l[2]}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} {new_fpalt} {new_fpgs}')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} 0 {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
-            stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
-            # Patch for descendcheck bug, delete last wpt.
+            #stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
+                # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
             self.startDescend[acid] = False
 
@@ -590,6 +567,7 @@ if rerouting:
         fp_landingAlt = 0
 
         list_nodes_id = new_nodeids
+
 
         lats, lons, turns, turn_indexs, turn_speeds, int_angle_list, _ = path_planner.route(
             list_nodes_id)  # 1ºarg: route of node_ids
