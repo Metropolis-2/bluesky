@@ -31,7 +31,7 @@ def setSpeed(idxown, diff):
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"SPD {traf.id[idxown]} {lowerSpdLimit}")
                 stack.stack(f"ECHO {traf.id[idxown]} is slowing down")
-        else:
+        elif traf.speedupdate[idxown]:
             if abs(diff) < 15:
                 stack.stack(f"{traf.id[idxown]} LNAV ON")
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
@@ -42,11 +42,11 @@ def setSpeed(idxown, diff):
                 stack.stack(f"{traf.id[idxown]} VNAV ON")
                 stack.stack(f"ECHO {traf.id[idxown]} is going back to wpt speed")
                 traf.speedupdate[idxown] = False
-            elif traf.swvnav[idxown] and not traf.swvnavspd[idxown] and int(traf.gs[idxown]/kts)==19:
-                stack.stack(f"{traf.id[idxown]} LNAV ON")
-                stack.stack(f"{traf.id[idxown]} VNAV ON")
-                stack.stack(f"ECHO {traf.id[idxown]} 19kts bug")
-                traf.speedupdate[idxown] = False
+        elif traf.swvnav[idxown] and not traf.swvnavspd[idxown] and int(traf.gs[idxown]/kts)==19:
+            stack.stack(f"{traf.id[idxown]} LNAV ON")
+            stack.stack(f"{traf.id[idxown]} VNAV ON")
+            stack.stack(f"ECHO {traf.id[idxown]} 19kts bug")
+            traf.speedupdate[idxown] = False
 
         if traf.speedupdate[idxown] and iactwp == np.argmax(ac_route.wpname) or iactwp == np.argmax(ac_route.wpname)-1:
             stack.stack(f"{traf.id[idxown]} LNAV ON")
