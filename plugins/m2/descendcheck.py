@@ -16,8 +16,10 @@ def checker(idx):
         # Determine the lat lon of the last and the second last waypoints. the second last waypoint is the ToD
         sec_last_wptidx = traf.ap.route[idx].nwp-2
 
-        if iwpid > sec_last_wptidx and not conflictProbe(traf, traf, idx, dtlook=traf.dtlookdown[idx],
-                                         targetVs=traf.perf.vsmin[idx]):
+        if iwpid > sec_last_wptidx:
+            pass
+
+        if iwpid > sec_last_wptidx and not conflictProbe(traf, traf, idx, dtlook=traf.dtlookdown[idx], targetVs=traf.perf.vsmin[idx]):
 
             stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
             # call the stacks
@@ -26,13 +28,16 @@ def checker(idx):
             if landing:
                 traf.selspd[idx] = 0.0
                 traf.selalt[idx] = 0.0
-                stack.stack(f"{traf.id[idx]} SPD 0")
-                stack.stack(f"{traf.id[idx]} ALT 0 ")
+                # stack.stack(f"{traf.id[idx]} SPD 0")
+                # stack.stack(f"{traf.id[idx]} ALT 0 ")
 
-            stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
+                stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
 
-            # update startDescend
-            startDescend = True
+                # update startDescend
+                startDescend = True
+
+            else:
+                startDescend = False
         else:
             startDescend = False
     else:
