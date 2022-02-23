@@ -29,7 +29,7 @@ ingeofence = True
 overshoot = True
 etachecker = True
 speedupdate = True
-rerouting = True
+rerouting = False
 descendCheck = True
 
 

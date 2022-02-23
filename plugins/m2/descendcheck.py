@@ -26,6 +26,8 @@ def checker(idx):
             if landing:
                 traf.selspd[idx] = 0.0
                 traf.selalt[idx] = 0.0
+                stack.stack(f"{traf.id[idx]} SPD 0")
+                stack.stack(f"{traf.id[idx]} ALT 0 ")
 
             stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
 
