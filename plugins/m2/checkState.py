@@ -29,7 +29,7 @@ ingeofence = True
 overshoot = True
 etachecker = True
 speedupdate = True
-rerouting = False
+rerouting = True
 descendCheck = True
 
 
@@ -361,7 +361,7 @@ class checkState(core.Entity):
         final_point = (ownship_route.wplat[last_wpidx], ownship_route.wplon[last_wpidx])
         new_fpalt = 30
 
-        new_fpgs = 10
+        new_fpgs = 5
         if ownship.alt[acid] / ft != new_fpalt:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
@@ -370,7 +370,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} 0 {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} LNAV {ownship.id[acid]} ON')
-           #stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
         # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
             self.startDescend[acid] = False
@@ -381,7 +381,7 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 ADDWPT {ownship.id[acid]} {final_point[0]} {final_point[1]} 0 {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
-            #stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
+            stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
                 # Patch for descendcheck bug, delete last wpt.
             self.reference_ac.remove(ownship.id[acid])
             self.startDescend[acid] = False
@@ -417,12 +417,39 @@ class checkState(core.Entity):
 
         new_nodeids = shortest_path(temp_graph, initial_point, final_point, True)
 
-        if ownship.alt[acid] == 0:
-            new_fpalt = 0
+        if ownship.alt[acid] == 30:
+            new_fpalt = 30
         elif 'reso' in layerName:
             new_fpalt = ownship.layerLowerAlt[idxCurrentLayer][0] / ft
         else:
             new_fpalt = ownship.layerLowerAlt[idxCurrentLayer + 1][0] / ft
+
+        if new_nodeids == None:
+            if layerDirection == 'normal':
+                newlayerDirection = 'inverted'
+            else:
+                newlayerDirection = 'normal'
+            temp_graph = graphs_dict[newlayerDirection]['graph'].copy()
+
+            for j in ownship.geoPoly:
+                values = {}
+                intersections = list(graphs_dict[newlayerDirection]['idx_tree'].intersection(j.bounds))
+                list_intersecting_edges = [graphs_dict[newlayerDirection]['edges_rtree'][ii] for ii in intersections]
+                for i in list_intersecting_edges:
+                    values[i] = {'pesoL': 9999}
+                nx.set_edge_attributes(temp_graph, values)
+
+            new_nodeids = shortest_path(temp_graph, initial_point, final_point, True)
+
+            if ownship.alt[acid] == 30:
+                new_fpalt = 30
+            elif 'reso' in layerName:
+                new_fpalt = ownship.layerLowerAlt[idxCurrentLayer - 2][0] / ft
+            else:
+                new_fpalt = ownship.layerLowerAlt[idxCurrentLayer - 1][0] / ft
+
+        if new_nodeids == None:
+            return
 
         ownship_type = ownship.type[acid]
         try:
