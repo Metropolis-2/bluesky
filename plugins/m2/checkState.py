@@ -28,9 +28,10 @@ Set to False if plugin must be off.
 ingeofence = True
 overshoot = True
 etachecker = True
-speedupdate = True
-rerouting = True
+speedupdate = False
+rerouting = False
 descendCheck = True
+hoveringCheck = True
 
 
 ### Initialization function of your plugin. Do not change the name of this
@@ -73,6 +74,15 @@ class sta:
         self.ata = ata
         self.ata_datetime = ata_dt
 
+class hovering:
+    def __init__(
+            self,
+            start,
+            sim_dt,
+            ):
+        self.start = start
+        self.sim_dt = sim_dt
+
 
 class checkState(core.Entity):
     ''' Example new entity object for BlueSky. '''
@@ -97,6 +107,9 @@ class checkState(core.Entity):
             self.turns = np.array([], dtype=object)
             self.turnspeed = np.array([], dtype=object)
 
+            #hovering
+            self.hovering = np.array([], dtype=object)
+
         # update traf
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
@@ -115,6 +128,9 @@ class checkState(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
+        #hovering
+        traf.hovering = self.hovering
+
         self.reference_ac = []
 
     def create(self, n=1):
@@ -130,6 +146,7 @@ class checkState(core.Entity):
         # etacheck
         self.orignwp[-n:] = 0
         self.sta[-n:] = sta(time=0, sta_dt=0, reroutes=0, ata=0, ata_dt=0, atd=0, atd_dt=0)
+        self.hovering[-n:] = hovering(start=None,sim_dt=None)
         self.eta[-n:] = 0
         self.delayed[-n:] = False
         self.turns[-n:] = 0
@@ -150,6 +167,9 @@ class checkState(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
+        #hovering
+        traf.hovering = self.hovering
+
     def delete(self, idx):
         super().delete(idx)
 
@@ -168,6 +188,9 @@ class checkState(core.Entity):
         traf.turns = self.turns
         traf.turnspeed = self.turnspeed
 
+        #hovering
+        traf.hovering = self.hovering
+
     def reset(self):
         ''' Reset area state when simulation is reset. '''
         super().reset()
@@ -180,6 +203,7 @@ class checkState(core.Entity):
         traf.geoPoly = self.geoPoly
         traf.geoDictOld = self.geoDictOld
         traf.geoPoly_vert = self.geoPoly_vert
+        traf.hovering = self.hovering
 
         self.reference_ac = []
 
@@ -303,6 +327,44 @@ class checkState(core.Entity):
                         stack.stack(f"{traf.id[idx]} DEL")
 
                     traf.startDescend = self.startDescend
+
+                '''
+                HoveringCheck plugin
+                During simulation of Medium scenarios around 50 aircraft were hovering indefinitely. This plugin is made
+                to ensure aircarft resume flight after one minute of hovering. Still Beta though. 
+                '''
+                if hoveringCheck:
+                    gs = traf.gs[idx]
+                    vs = traf.vs[idx]
+                    iactwp = traf.ap.route[idx].iactwp
+
+                    if gs == 0 and vs == 0 and self.hovering[idx].start == None:
+                        self.hovering[idx].start = sim.utc.timestamp()
+                    elif gs == 0 and vs == 0 and self.hovering[idx].start != None:
+                        self.hovering[idx].sim_dt = sim.utc.timestamp()
+                        delta = self.hovering[idx].sim_dt - self.hovering[idx].start
+                        if delta > 60:
+                            traf.resostrategy[idx] = "None"
+                            traf.cr.hdgactive[idx] = False
+                            traf.cr.tasactive[idx] = False
+                            traf.cr.altactive[idx] = False
+                            traf.cr.vsactive[idx] = False
+
+                            # If the drone was hovering, it should continue to climb/descend
+                            stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft}")
+                            stack.stack(
+                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iactwp]}")
+                            stack.stack(
+                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} LNAV {traf.id[idx]} ON")
+                            stack.stack(
+                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} VNAV {traf.id[idx]} ON")
+
+                    elif gs != 0 or vs != 0:
+                        self.hovering[idx].start = None
+                        self.hovering[idx].sim_dt = None
+
+                    traf.hovering = self.hovering
+
 
     @stack.command
     def echoacgeofence(self, acid: 'acid'):
