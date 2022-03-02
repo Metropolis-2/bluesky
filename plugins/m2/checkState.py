@@ -11,7 +11,7 @@ from plugins.routingTactical import PathPlanner, ScenarioMaker
 
 # Import the global bluesky objects. Uncomment the ones you need
 import bluesky as bs
-from bluesky import core, stack, traf, sim, settings  # , navdb, sim, scr, tools
+from bluesky import core, stack, traf, sim, settings, tools  # , navdb, sim, scr, tools
 from bluesky.tools.aero import ft, kts
 import plugins.m2.descendcheck as descendcheck
 import plugins.m2.ingeoFence as ingeoFence
@@ -32,6 +32,7 @@ speedupdate = False
 rerouting = False
 descendCheck = True
 hoveringCheck = True
+escapeCheck = True
 
 
 ### Initialization function of your plugin. Do not change the name of this
@@ -110,6 +111,9 @@ class checkState(core.Entity):
             #hovering
             self.hovering = np.array([], dtype=object)
 
+            #overshootcount
+            self.overshootcounter = np.array([], dtype=object)
+
         # update traf
         traf.overshot = self.overshot
         traf.wptdist = self.wptdist
@@ -143,6 +147,9 @@ class checkState(core.Entity):
         self.ingeofence[-n:] = False
         self.acingeofence[-n:] = False
 
+        # overshootcount
+        self.overshootcounter = 0
+
         # etacheck
         self.orignwp[-n:] = 0
         self.sta[-n:] = sta(time=0, sta_dt=0, reroutes=0, ata=0, ata_dt=0, atd=0, atd_dt=0)
@@ -151,6 +158,7 @@ class checkState(core.Entity):
         self.delayed[-n:] = False
         self.turns[-n:] = 0
         self.turnspeed[-n:] = 0
+
 
         # update traf
         traf.overshot = self.overshot
@@ -206,6 +214,8 @@ class checkState(core.Entity):
         traf.hovering = self.hovering
 
         self.reference_ac = []
+        # overshootcount
+        self.overshootcounter = 0
 
     @core.timed_function(name='descendcheck', dt=5)
     def update(self):
@@ -247,9 +257,15 @@ class checkState(core.Entity):
                 rerouted in the reso 0 layer (multidirectional).
                 '''
                 if overshoot:
+                    #Check if ac is not in an infinite overshoot loop
+                    if self.overshootcounter > 1:
+                        stack.stack(f"SPD {traf.id[idx]} 0")
+                        stack.stack(f"ALT {traf.id[idx]} 0")
+                        stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
                     # overshoot checker (only if there is a route and we are almost at destination):
-                    if traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(
+                    elif traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(
                             traf.ap.route[idx].wpname):
+                        self.overshootcounter = + 1
                         dist = overshootcheck.calc_dist(idx)
                         val = overshootcheck.checker(idx, dist)
                         self.overshot[idx] = val
@@ -364,6 +380,11 @@ class checkState(core.Entity):
                         self.hovering[idx].sim_dt = None
 
                     traf.hovering = self.hovering
+
+                if escapeCheck:
+                   if abs(tools.geo.kwikdist(48.2050, 16.3623, traf.lat[idx], traf.lon[idx])) > 8.0:
+                       stack.stack(f"{traf.id[idx]} DEL")
+
 
 
     @stack.command
