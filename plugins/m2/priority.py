@@ -59,8 +59,7 @@ class priority(core.Entity):
         ''' Set the priority of 'acid' to 'prio'. '''
         self.priority[acid] = prio
         traf.priority = self.priority
-        return True, f'The priority of {traf.id[acid]} is set to {prio}.'
-    
+        # return True, f'The priority of {traf.id[acid]} is set to {prio}.'
     
     @stack.command
     def echopriority(self, acid: 'acid'):
