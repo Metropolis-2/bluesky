@@ -99,6 +99,8 @@ class checkState(core.Entity):
             self.geoPoly = None
             self.geoPoly_vert = None
             self.geoDictOld = dict()
+            self.overshootcounter = np.array([], dtype=int)
+
 
             # etacheck
             self.orignwp = np.array([], dtype=int)
@@ -110,9 +112,6 @@ class checkState(core.Entity):
 
             #hovering
             self.hovering = np.array([], dtype=object)
-
-            #overshootcount
-            self.overshootcounter = np.array([], dtype=object)
 
         # update traf
         traf.overshot = self.overshot
@@ -135,6 +134,8 @@ class checkState(core.Entity):
         #hovering
         traf.hovering = self.hovering
 
+        traf.overshootcounter = self.overshootcounter
+
         self.reference_ac = []
 
     def create(self, n=1):
@@ -146,9 +147,6 @@ class checkState(core.Entity):
         self.wptdist[-n:] = 99999
         self.ingeofence[-n:] = False
         self.acingeofence[-n:] = False
-
-        # overshootcount
-        self.overshootcounter = 0
 
         # etacheck
         self.orignwp[-n:] = 0
@@ -178,6 +176,8 @@ class checkState(core.Entity):
         #hovering
         traf.hovering = self.hovering
 
+        traf.overshootcounter = self.overshootcounter
+
     def delete(self, idx):
         super().delete(idx)
 
@@ -199,6 +199,8 @@ class checkState(core.Entity):
         #hovering
         traf.hovering = self.hovering
 
+        traf.overshootcounter = self.overshootcounter
+
     def reset(self):
         ''' Reset area state when simulation is reset. '''
         super().reset()
@@ -212,10 +214,9 @@ class checkState(core.Entity):
         traf.geoDictOld = self.geoDictOld
         traf.geoPoly_vert = self.geoPoly_vert
         traf.hovering = self.hovering
+        traf.overshootcounter = self.overshootcounter
 
         self.reference_ac = []
-        # overshootcount
-        self.overshootcounter = 0
 
     @core.timed_function(name='descendcheck', dt=5)
     def update(self):
@@ -258,18 +259,20 @@ class checkState(core.Entity):
                 '''
                 if overshoot:
                     #Check if ac is not in an infinite overshoot loop
-                    if self.overshootcounter > 1:
+                    if self.overshootcounter[idx] > 1:
                         stack.stack(f"SPD {traf.id[idx]} 0")
                         stack.stack(f"ALT {traf.id[idx]} 0")
                         stack.stack(f"ATALT {traf.id[idx]} 5 DEL {traf.id[idx]}")
                     # overshoot checker (only if there is a route and we are almost at destination):
                     elif traf.ap.route[idx].iactwp != -1 and traf.ap.route[idx].iactwp == np.argmax(
                             traf.ap.route[idx].wpname):
-                        self.overshootcounter = + 1
+                        self.overshootcounter[idx] = self.overshootcounter[idx] + 1
                         dist = overshootcheck.calc_dist(idx)
                         val = overshootcheck.checker(idx, dist)
                         self.overshot[idx] = val
                         traf.overshot = self.overshot
+
+                    traf.overshootcounter = self.overshootcounter
                 '''
                 Etacheck Plugin
                 This plugins calculates STA, ETA, ATD and ATA. ETA and STA is calculated by summing all route segments
