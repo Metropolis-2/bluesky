@@ -344,7 +344,6 @@ class checkState(core.Entity):
                         self.startDescend[idx] = descendcheck.checker(idx)
                     elif traf.alt[idx] < 1.0 * ft:
                         stack.stack(f"{traf.id[idx]} DEL")
-
                     traf.startDescend = self.startDescend
 
                 '''
@@ -363,20 +362,31 @@ class checkState(core.Entity):
                         self.hovering[idx].sim_dt = sim.utc.timestamp()
                         delta = self.hovering[idx].sim_dt - self.hovering[idx].start
                         if delta > 60:
-                            traf.resostrategy[idx] = "None"
-                            traf.cr.hdgactive[idx] = False
-                            traf.cr.tasactive[idx] = False
-                            traf.cr.altactive[idx] = False
-                            traf.cr.vsactive[idx] = False
+                            if traf.alt[idx]==0:
+                                stack.stack(f'{traf.id[idx]} DEL')
+                            else:
+                                try:
+                                    traf.resostrategy[idx] = "None"
+                                    traf.cr.hdgactive[idx] = False
+                                    traf.cr.tasactive[idx] = False
+                                    traf.cr.altactive[idx] = False
+                                    traf.cr.vsactive[idx] = False
 
-                            # If the drone was hovering, it should continue to climb/descend
-                            stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft}")
-                            stack.stack(
-                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iactwp]}")
-                            stack.stack(
-                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} LNAV {traf.id[idx]} ON")
-                            stack.stack(
-                                f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} VNAV {traf.id[idx]} ON")
+                                except:
+                                    with open('../output/traferrors.txt', 'a+') as file:
+                                        file.write(f"cant find {traf.id[idx]} in any traf.cr object \n")
+                                        for i in [traf.cr.hdgactive, traf.cr.tasactive,traf.cr.altactive,traf.cr.vsactive]:
+                                            file.write(f" object has length {len(i)} \n")
+                                        file.close()
+
+                                # If the drone was hovering, it should continue to climb/descend
+                                stack.stack(f"ALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft}")
+                                stack.stack(
+                                    f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} SPD {traf.id[idx]} {traf.ap.route[idx].wpspd[iactwp]}")
+                                stack.stack(
+                                    f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} LNAV {traf.id[idx]} ON")
+                                stack.stack(
+                                    f"ATALT {traf.id[idx]} {traf.ap.route[idx].wpalt[iactwp] / ft} VNAV {traf.id[idx]} ON")
 
                     elif gs != 0 or vs != 0:
                         self.hovering[idx].start = None
@@ -387,6 +397,7 @@ class checkState(core.Entity):
                 if escapeCheck:
                    if abs(tools.geo.kwikdist(48.2050, 16.3623, traf.lat[idx], traf.lon[idx])) > 8.0:
                        stack.stack(f"{traf.id[idx]} DEL")
+
 
 
 
@@ -458,8 +469,11 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD {new_fpgs} VNAV {ownship.id[acid]} ON')
         # Patch for descendcheck bug, delete last wpt.
-            self.reference_ac.remove(ownship.id[acid])
-            self.startDescend[acid] = False
+            try:
+                self.reference_ac.remove(ownship.id[acid])
+                self.startDescend[acid] = False
+            except:
+                self.startDescend[acid] = False
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
@@ -468,9 +482,12 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 SPD {ownship.id[acid]} {new_fpgs}')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
-                # Patch for descendcheck bug, delete last wpt.
-            self.reference_ac.remove(ownship.id[acid])
-            self.startDescend[acid] = False
+            # Patch for descendcheck bug, delete last wpt.
+            try:
+                self.reference_ac.remove(ownship.id[acid])
+                self.startDescend[acid] = False
+            except:
+                self.startDescend[acid] = False
 
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
         self.sta[acid].time = 0
@@ -558,8 +575,11 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATALT {new_fpalt} VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
-            self.reference_ac.remove(ownship.id[acid])
-            self.startDescend[acid] = False
+            try:
+                self.reference_ac.remove(ownship.id[acid])
+                self.startDescend[acid] = False
+            except:
+                self.startDescend[acid] = False
         else:
             stack.stack(f'DELRTE {ownship.id[acid]}')
             stack.stack(f'SPD {ownship.id[acid]} 0')
@@ -574,9 +594,11 @@ class checkState(core.Entity):
             stack.stack(f'{ownship.id[acid]} ATSPD 0 LNAV {ownship.id[acid]} ON')
             stack.stack(f'{ownship.id[acid]} ATSPD 0 VNAV {ownship.id[acid]} ON')
             # Patch for descendcheck bug, delete last wpt.
-            self.reference_ac.remove(ownship.id[acid])
-            self.startDescend[acid] = False
-
+            try:
+                self.reference_ac.remove(ownship.id[acid])
+                self.startDescend[acid] = False
+            except:
+                self.startDescend[acid] = False
         self.sta[acid].reroutes = self.sta[acid].reroutes + 1
         self.sta[acid].time = 0
         self.sta[acid].sta_dt = 0
