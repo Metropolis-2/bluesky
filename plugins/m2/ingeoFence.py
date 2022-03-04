@@ -10,7 +10,7 @@ def checker(acid: 'acid', multiGeofence, multiGeofence_vert):
 
     ac_lat = traf.lat[acid]
     ac_lon = traf.lon[acid]
-    ac_route_alt = Point(0,traf.ap.route[acid].wpalt[4]/ft)
+    ac_route_alt = Point(0,max(traf.ap.route[acid].wpalt)/ft)
     ac_alt = Point(0,traf.alt[acid]/ft)
     ac_pos = Point(ac_lon, ac_lat)
 

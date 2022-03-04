@@ -21,7 +21,7 @@ def checker(idx):
 
         if iwpid > sec_last_wptidx and not conflictProbe(traf, traf, idx, dtlook=traf.dtlookdown[idx], targetVs=traf.perf.vsmin[idx]):
 
-            stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
+            #stack.stack(f'ECHO For {traf.id[idx]} descendcheck is turned ON')
             # call the stacks
             landing = not traf.swlnav[idx] and traf.actwp.swlastwp[idx]
 
