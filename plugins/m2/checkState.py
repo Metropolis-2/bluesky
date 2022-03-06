@@ -28,7 +28,7 @@ Set to False if plugin must be off.
 ingeofence = True
 overshoot = True
 etachecker = True
-speedupdate = True
+speedupdate = False
 rerouting = True
 descendCheck = True
 hoveringCheck = True
