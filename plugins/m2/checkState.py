@@ -641,7 +641,7 @@ if rerouting:
         # Calculate the closest node of both the origin and the destination to form the route
         origin_node, d1 = ox.nearest_nodes(G, origin[1], origin[0], return_dist=True)  # (lon, lat)
         dest_node, d2 = ox.nearest_nodes(G, destination[1], destination[0], return_dist=True)  # (lon, lat)
-        print("shortest_path()=> From {} to {}".format(origin_node, dest_node))
+        #print("shortest_path()=> From {} to {}".format(origin_node, dest_node))
         if mode:
             osmid_route = ox.shortest_path(G, origin_node, dest_node, weight='pesoL')
         else:
@@ -713,10 +713,10 @@ if rerouting:
 
         init_lat_route = lats[0]
         init_lon_route = lons[0]
-        print("init position route {},{}".format(init_lat_route, init_lon_route))
+        #print("init position route {},{}".format(init_lat_route, init_lon_route))
         final_lat_route = lats[-1]
         final_lon_route = lons[-1]
-        print("final position route {},{}".format(final_lat_route, final_lon_route))
+        #print("final position route {},{}".format(final_lat_route, final_lon_route))
 
         # LANDING
         if (final_lat_route != fp_landingLat or final_lon_route != fp_landingLon):
@@ -731,10 +731,10 @@ if rerouting:
         alts.insert(len(alts), fp_landingAlt)
         turns.insert(len(turns), False)
 
-        print("lats: {}".format(lats))
-        print("lons: {}".format(lons))
-        print("alts: {}".format(alts))
-        print("turns: {}".format(turns))
+        #print("lats: {}".format(lats))
+        #print("lons: {}".format(lons))
+        #print("alts: {}".format(alts))
+        #print("turns: {}".format(turns))
         #        print("int_angle_list: {}".format(int_angle_list))
 
         # Initialize scenario
@@ -752,7 +752,7 @@ if rerouting:
         # Add turnbool
         scenario_dict[fplan_id]['turnbool'] = turns
 
-        print("scenario_dict: {}".format(scenario_dict))
+        #print("scenario_dict: {}".format(scenario_dict))
 
         lines = scenario.Dict2Scn('temp.scn', scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle,
                                   int_angle_list, turn_indexs, turn_speeds)

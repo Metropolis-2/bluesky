@@ -34,10 +34,10 @@ def checker(acid: 'acid', multiGeofence, multiGeofence_vert):
         destval = i.contains((Point(routecoords[-1])))
         if destval: break
 
-    if acval:
-        print(f'{acid} stuck in geofence')
-    if destval:
-        print(f'{acid} destination stuck in geofence')
+    #if acval:
+        #print(f'{acid} stuck in geofence')
+    #if destval:
+        #print(f'{acid} destination stuck in geofence')
     if routeval and not acval and not destval:
         stack.stack(f'REROUTEGEOFENCE {traf.id[acid]}')
 

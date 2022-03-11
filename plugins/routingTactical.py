@@ -34,11 +34,11 @@ class MainApp():
     def startRoutingPlan(self, flight_intentions):
 
         self.thread_id = multiprocessing.current_process().name
-        self.createLoggerHandler()
+        #self.createLoggerHandler()
 
         self.scenario = ScenarioMaker(self.logger)
         self.routing = RoutingAlgorithm(self, self.logger, angle_cutoff=25)
-        #self.logger.debug("Current work directory: {}".format(os.getcwd()))
+        #
 
         self.OUTPUT_SCN = self.settings.ROOT_OUTPUT_SCN + flight_intentions.split(".")[0] + self.settings.OUTPUT_SCN
         self.logger.success("self.OUTPUT_SCN: {}".format(self.OUTPUT_SCN))
@@ -53,12 +53,8 @@ class MainApp():
         # start routing process
         self.paths = self.routing.get_paths(self.fp_plans, self.lista_g)
 
-        self.logger.info("Generated PATHS: ")
-        for p in self.paths:
-            self.logger.info(p)
-        self.logger.info("FPLANS AFTER ROUTING STRATEGY")
-        for fp in self.fp_plans:
-            self.logger.info(fp)
+
+
 
         self.end = time.time()
         self.FINAL_EXECUTION_TIME = self.end - self.start
@@ -119,26 +115,27 @@ class MainApp():
         self.thread_id = None
         self.logger = None
 
-    @logger.catch
+
     def debugging_filter(self, record):
         min_level = os.getenv("DEBUGGING_LEVEL", self.settings.LOG_LEVEL)
         return record["level"].no >= logger.level(min_level).no
 
-    @logger.catch
+
     def createLoggerHandler(self):
         # Set handler,format,filter of logger (https://github.com/Delgan/loguru#readme)
         logger.remove(0)  # Remove default handler which has no filter
         fmt = "<white>{extra[threadid]} [{time:YYYY-MM-DD at HH:mm:ss}] | {name}:{function}:{line} -</white> <level>{message}</level>"
-        logger.add(sys.stderr, format=fmt,filter=self.debugging_filter, enqueue=True, colorize=True)
+        logger.add(sys.stderr, format=fmt,filter=self.debugging_filter, enqueue=True, colorize=True,level='CRITICAL')
         logger.add(os.path.join(self.settings.LOGS_FOLDER, "file_{time}.log"), format=fmt, rotation="50 MB")
+        logger.configure(handlers=[{"sink": sys.stderr, "level": "CRITICAL"}])
         self.logger = logger.bind(threadid=self.thread_id)
 
-    @logger.catch
+
     def loadGraphData(self):
         with open(settings.GPKG_LIST) as file:
             gpkg_paths = file.readlines()
             gpkg_paths = [settings.GPKG_FOLDER + gpkg_path.rstrip() + ".gpkg" for gpkg_path in gpkg_paths]
-        self.logger.info(gpkg_paths)
+
 
         i = 0
         for gpkg in gpkg_paths:
@@ -157,22 +154,22 @@ class MainApp():
             self.logger.trace("Nans en edges: {}".format(edmod.isna().sum()))
             i += 1
 
-    @logger.catch
+
     def loadAircraftData(self):
         # Load Aircraft File
         self.aircraft = open(settings.AIRCRAFT_PATH)
 
-    @logger.catch
+
     def loadFPlansData(self, flight_intentions):
         # Load Flight Planes File
         file = open(flight_intentions)
         line = file.readline()
         while line:
 
-            self.logger.debug(line)
+
             line = line.rstrip("\n") + settings.PENDING_STATUS + "\n"
             line_list = line.rstrip().split(',')
-            self.logger.debug(line_list)
+
             new_line = []
             new_line.append(line_list[0])
             new_line.append(line_list[1])
@@ -186,15 +183,15 @@ class MainApp():
             lat_fin = line_list[7][:-2]
 
             tuple_init = eval(lat_init + "," + lon_init)
-            self.logger.debug("lat_init {} and lon_init {} and tuple_init {}".format(lat_init, lon_init, tuple_init))
+
             tuple_fin = eval(lat_fin + "," + lon_fin)
-            self.logger.debug("lat_fin {} and lon_fin {} and tuple_fin {}".format(lat_fin, lon_fin, tuple_fin))
+
             new_line.append(str(tuple_init))
             new_line.append(str(tuple_fin))
             new_line.append(line_list[8])  # priority
 
 
-            self.logger.debug("len(line_list): {}".format(len(line_list)))
+
             if(line_list[9] != ''): #loitering mission
                 new_line.append(line_list[14])  # status
                 new_line.append(line_list[9])  # duration geofence
@@ -207,31 +204,26 @@ class MainApp():
 
                 tuple_point1_bbox = eval(lat_point1_bbox + "," + lon_point1_bbox)
                 new_line.append(str(tuple_point1_bbox))
-                self.logger.debug("lat_point1_bbox {} and lon_point1_bbox {} and tuple_point1_bbox {}".format(lat_point1_bbox, lon_point1_bbox, tuple_point1_bbox))
+
                 tuple_point2_bbox = eval(lat_point2_bbox + "," + lon_point2_bbox)
                 new_line.append(str(tuple_point2_bbox))
-                self.logger.debug("lat_point2_bbox {} and lon_point2_bbox {} and tuple_point2_bbox {}".format(lat_point2_bbox, lon_point2_bbox, tuple_point2_bbox))
+
 
             else:
                 new_line.append(line_list[14])  # status #TODO: BEFORE WAS 9?
 
 
-            self.logger.debug(new_line)
+
             self.fp_plans.append(new_line)
             line = file.readline()
         file.close()
 
-        self.logger.info("FPLANS before sorted")
-        for line in self.fp_plans:
-            self.logger.info(line)
+
 
         self.fp_plans = sorted(self.fp_plans, key=lambda e: (-int(len(e)), e[settings.RECEPTION_TIME_FP_INDEX], -int(e[settings.PRIORITY_INDEX])))
 
-        self.logger.info("FPLANS after sorted")
-        for line in self.fp_plans:
-            self.logger.info(line)
 
-    @logger.catch
+
     def buildScenarioUnitary(self, index_layer, dict_nodes_alt, fplan_id, fplan_departuretime, fplan_priority, fplan_arrivaltime, fplan_vehicle, fp, edges_index_dict):
         '''
         CALLfrom get_paths()
@@ -240,7 +232,7 @@ class MainApp():
                                           str(fplan_arrivaltime), str(fp[settings.VEHICLE_INDEX]), fp)
         '''
 
-        self.logger.debug("index_layer: {}".format(index_layer))
+
         path_planner = PathPlanner(self.lista_g[index_layer], edges_index_dict, self.logger, angle_cutoff=25)
         osmid_route = dict_nodes_alt
         #{32637472.0: (30,), 33242231.0: (30,), 33242240.0: (30,), 3242084.0: (30,)}
@@ -248,42 +240,42 @@ class MainApp():
         lista_nodes_id = list(osmid_route.keys()) #[32637472.0, 33242231.0...]
         self.logger.success("lista_nodes_id: {}".format(lista_nodes_id))
         lats, lons, turns, turn_indexs, int_angle_list, angle_cut_off = path_planner.route(lista_nodes_id) #1ºarg: route of nodeids
-        self.logger.debug("int_angle_list: {}".format(int_angle_list))
+
 
         for fp in self.fp_plans:
             if(fp[settings.FPLAN_ID_INDEX] == fplan_id): #it only goes in once because it is a unit analysis per fp in the calls to this method
-                self.logger.debug("fplan_id: {} corresponding with FPLAN_ID {}".format(fplan_id,fp[settings.FPLAN_ID_INDEX]))
+
                 fp_takeOffLat = normal_round(float(eval(fp[settings.INITIAL_LOCATION_INDEX])[0]),6)
                 fp_takeOffLon = normal_round(float(eval(fp[settings.INITIAL_LOCATION_INDEX])[1]),6)
                 fp_takeOffAlt = float(settings.TAKEOFF_ALT)
-                self.logger.debug("fp_takeOffLat: {}".format(fp_takeOffLat))
-                self.logger.debug("fp_takeOffLon: {}".format(fp_takeOffLon))
-                self.logger.debug("fp_takeOffAlt: {}".format(fp_takeOffAlt))
+
+
+
                 fp_landingLat = normal_round(float(eval(fp[settings.FINAL_LOCATION_INDEX])[0]),6)
                 fp_landingLon = normal_round(float(eval(fp[settings.FINAL_LOCATION_INDEX])[1]),6)
                 fp_landingAlt = float(settings.LANDING_ALT)
-                self.logger.debug("fp_landingLat: {}".format(fp_landingLat))
-                self.logger.debug("fp_landingLon: {}".format(fp_landingLon))
-                self.logger.debug("fp_landingAlt: {}".format(fp_landingAlt))
+
+
+
                 break
 
         #Calculate alts list
         #Convert the dict values: [(30), (30,), (30,), (30,), (30,), (30,)]
         #Into this: [30, 30, 30, 30, 30, 30]
         lista_tuplas_alturas = list(dict_nodes_alt.values())
-        self.logger.debug(lista_tuplas_alturas)
+
         alts = []
         for tupla in lista_tuplas_alturas:
             for t in tupla:
                 alts.append(t)
-        self.logger.debug("alts list: {}".format(alts))
+
 
 
         if(all(element == alts[0] for element in alts)): #La lista lats tiene la misma altura en todos los elementos (ANALISIS HORIZONTAL)
-            self.logger.debug("ALL ALTITUDES IN THE LIST WITH THE INITIAL VALUE: {}".format(alts[0]))
+
             #Si es el caso rellenamos por el final de la lista de alturas con el ultimo valor
             last_altitude_list = alts[-1]
-            self.logger.debug("last_altitude_list: {}".format(last_altitude_list))
+
             while(len(alts) != len(lats)):
                 alts.append(last_altitude_list)
 
@@ -314,12 +306,12 @@ class MainApp():
             turn_index = turn_index + 1
             turn_indexs[i] = turn_index
 
-        self.logger.debug("len(lats): {}".format(len(lats)))
-        self.logger.debug("len(lons): {}".format(len(lons)))
-        self.logger.debug("len(alts): {}".format(len(alts)))
-        self.logger.debug("len(turns): {}".format(len(turns)))
-        self.logger.debug("len(turn_indexs): {}".format(len(turn_indexs)))
-        self.logger.debug("len(int_angle_list): {}".format(len(int_angle_list)))
+
+
+
+
+
+
 
         new_int_angle_list = []
         for interior_angle in int_angle_list:
@@ -364,20 +356,20 @@ class MainApp():
         # Add turnbool
         scenario_dict[fplan_id]['turnbool'] = turns
 
-        self.logger.debug("scenario_dict: {}".format(scenario_dict))
-        self.logger.info("fplan_arrivaltime: {}".format(fplan_arrivaltime))
+
+
 
 
         # The scenarioini.scn file is saved in the BlueSky scenario folder inside the /plugins folder.
         # The /scenario directory must already exist
         self.scenario.Dict2Scn(self.OUTPUT_SCN, scenario_dict, fplan_priority, fplan_arrivaltime, fplan_vehicle, int_angle_list, turn_indexs, turn_speeds, fp)
-        #self.logger.debug(lines)
+        #
 
 
 class RoutingAlgorithm():
     ''' RoutingAlgorithm new entity object for BlueSky. '''
 
-    @logger.catch
+
     def __init__(self, mainApp, logger, angle_cutoff=25):
         self.logger = logger
         self.mainApp = mainApp
@@ -398,51 +390,51 @@ class RoutingAlgorithm():
         # TO disconver if a node i turnNode in fp_evaluations
         self.angle_cutoff = angle_cutoff
 
-    @logger.catch
+
     def calculate_edges_df_rtree(self, edges):
         # In this method, which is executed before routing, we calculate the base edges_df_rtree
         # which is the dataframe of the streets on the base layer (EmergencyCrusing)
         # create rtree index for each edge
 
-        self.logger.info("calculate_edges_df_rtree processing...")
+
         self.edges_df_rtree = index.Index()
         self.edges_df_dict = {}
         for i, row in edges.iterrows():
             self.edges_df_rtree.insert(i, row['geometry'].bounds)
             self.edges_df_dict[i] = (row['u'], row['v'])
-        self.logger.info("edges_df_rtree calculated!")
 
-    @logger.catch
+
+
     def createGeofence(self, fp, glist, fplan_arrivaltime):
 
         geo_point1 = fp[settings.GEOFENCE_BBOX_POINT1]
         geo_point2 = fp[settings.GEOFENCE_BBOX_POINT2]
         geo_duration = fp[settings.GEOFENCE_DURATION]
         loitering_takeoff = fp[settings.DEPARTURE_INDEX]
-        self.logger.info("geo_point1: {}".format(geo_point1))
-        self.logger.info("geo_point2: {}".format(geo_point2))
-        self.logger.info("geo_duration: {}".format(geo_duration))
-        self.logger.info("loitering_takeoff: {}".format(loitering_takeoff))
+
+
+
+
 
         # create bbox
         poly_bounds = (eval(geo_point1)[1], eval(geo_point1)[0], eval(geo_point2)[1], eval(geo_point2)[0])
-        self.logger.info("poly_bounds: {}".format(poly_bounds))
+
 
         try:
             # check the intersecting edges to a polygon
             intersecting_rtree = list(self.edges_df_rtree.intersection(poly_bounds))
             intersecting_edges = np.array([self.edges_df_dict[i] for i in intersecting_rtree], dtype='object')
-            self.logger.info("intersecting_edges: {}".format(intersecting_edges))
+
         except Exception as e:
             self.logger.critical(e)
 
         if(intersecting_edges.size > 0): # if there are streets that intersect the geofence, the generic occupation tuple is extracted with the mission loitering and blocking air space
-            self.logger.info("The geofence will be active for {} seconds".format(geo_duration))
+
             tinit_geo  = int(fplan_arrivaltime) # we take the time in which the UAV arrives at the starting point of loitering (last routing node)
             tfin_geo = int(tinit_geo) + int(geo_duration)
             tuple_geofence = (tinit_geo, tfin_geo)
             tuple_geofence = str(tuple_geofence)
-            self.logger.info("tinit_geo {} and tfin_geo {}; form the tuple {}".format(str(tinit_geo), str(tfin_geo), str(tuple_geofence)))
+
 
             # Extract and save all nodes and edges afected by geofence
             # Ej intersecting_edges: [(33344821, 392251) (60631958, 60631775) (393373, 33344821)]
@@ -451,28 +443,28 @@ class RoutingAlgorithm():
             geo_edge_list_inv = []
             for item in intersecting_edges:
                 edgeAB = (item[0], item[1], 0) # tuple u,v,k for normal cruising layers
-                self.logger.debug("edgeAB: {}".format(edgeAB))
+
                 geo_edge_list.append(edgeAB)
                 edgeAB_inv = (item[1], item[0], 0) # tuple v,u,k for inverted crusing layers
-                self.logger.debug("edgeAB_inv: {}".format(edgeAB_inv))
+
                 geo_edge_list_inv.append(edgeAB_inv)
 
                 nodeA = item[0]
-                self.logger.debug("nodeA: {}".format(nodeA))
+
                 geo_node_list.append(nodeA)
 
                 nodeB = item[1]
-                self.logger.debug("nodeB: {}".format(nodeB))
+
                 geo_node_list.append(nodeB)
 
 
             # Remove nodes repeated
             geo_node_list = list(dict.fromkeys(geo_node_list))
-            self.logger.debug("geo_node_list: {}".format(geo_node_list))
-            self.logger.debug("len(geo_node_list): {}".format(len(geo_node_list)))
 
-            self.logger.debug("geo_edge_list: {}".format(geo_edge_list))
-            self.logger.debug("len(geo_edge_list): {}".format(len(geo_edge_list)))
+
+
+
+
 
             # Iterate list of graphs:
             for g_cont in range(0,len(glist)):
@@ -511,46 +503,46 @@ class RoutingAlgorithm():
 
         return glist
 
-    @logger.catch
+
     def edge_gdf_format_from_gpkg(self, edges):
         edge_dict = edges.to_dict()
         edge_gdf = gp.GeoDataFrame(edge_dict, crs = CRS.from_user_input(4326))
         edge_gdf.set_index(['u', 'v', 'key'], inplace = True)
         return edge_gdf
 
-    @logger.catch
+
     def node_gdf_format_from_gpkg(self, nodes):
         node_dict = nodes.to_dict()
         node_gdf = gp.GeoDataFrame(node_dict, crs = CRS.from_user_input(4326))
         node_gdf.set_index(['osmid'], inplace = True)
         return node_gdf
 
-    @logger.catch
+
     def get_sec(self, time_str):# Convert hh:mm:ss format to tiemstamp seconds
         h, m, s = time_str.split(':')
         return int(h) * settings.MINUTS_CONVERSION + int(m) * settings.SECONDS_CONVERSION + int(s)
 
-    @logger.catch
+
     def get_min(self, time_int):# Convert tiemstamp seconds to hh:mm:ss
         timestamp = time.strftime('%H:%M:%S', time.gmtime(time_int))
         return timestamp
 
-    @logger.catch
+
     def shortest_path(self, G, origin, destination, mode):# Calculate the nodes route from an origin (lat, lon) to a destinetion (lat, lon)
         origin_node, d1 = ox.nearest_nodes(G, origin[1], origin[0], return_dist = True)# (lon, lat)
         dest_node, d2 = ox.nearest_nodes(G, destination[1], destination[0], return_dist = True)# (lon, lat)
-        self.logger.debug("shortest_path()=> From {} to {}".format(origin_node,dest_node))
+
         if mode:
             osmid_route = ox.shortest_path(G, origin_node, dest_node, weight = 'pesoL')
         else:
             osmid_route = ox.shortest_path(G, origin_node, dest_node)
         return osmid_route
 
-    @logger.catch
+
     def nodeIsFree(self, osmid_node, timestamp_tuple, nodes):# Check if node is free or taked in the timestamp instant (tuple)
 
         slot_time_list = nodes.iloc[osmid_node, settings.INDEX_NP_NODES_OCUPATION]
-        self.logger.debug("Node {}; Ocuppation Time {}; Timestamp_tuple {}".format(osmid_node,slot_time_list,timestamp_tuple))
+
 
         if(slot_time_list == '[None]' or slot_time_list == ""):# Free Node
             return True
@@ -573,13 +565,13 @@ class RoutingAlgorithm():
             else:
                 return True# Free Node
 
-    @logger.catch
+
     def edgeIsFree(self, osmid_nodeA, osmid_nodeB, timestamp_tuple, edges, edge_index):# Check if the links between two nodes are free in the slot time
         if(osmid_nodeA == osmid_nodeB):# No edge exist between same nodes
             return True
         else:
             slot_time_list = edges.iloc[edge_index, settings.INDEX_NP_EDGES_OCUPATION]
-            self.logger.debug("Edge between {} and {}; Ocuppation Slot Time {}; Slot Timestamp {}".format(osmid_nodeA,osmid_nodeB,slot_time_list,timestamp_tuple))
+
 
             if(slot_time_list == '[None]' or slot_time_list == ""):# Free Edge
                 return True
@@ -599,34 +591,34 @@ class RoutingAlgorithm():
                 else:
                     return True# Free Edge
 
-    @logger.catch
+
     def travel_time(self, nodeA, nodeB, speed, timestamp_nodeA, edges, fp, nodeC, edge_index):
         if(nodeA == nodeB): # will never enter here because it is limited before the action
             # This case of nodeA==nodeB would only occur at the beginning, therefore tinit = time = departure time
             return self.get_sec(str(fp[settings.DEPARTURE_INDEX])) #departure_time
         else:
             length = edges.iloc[edge_index, settings.INDEX_NP_EDGES_LENGTH]
-            self.logger.debug("timestamp_nodeA {} ".format(timestamp_nodeA))
-            self.logger.debug("nodeA {} ".format(nodeA))
-            self.logger.debug("nodeB {} ".format(nodeB))
-            self.logger.debug("length {}".format(length))
-            self.logger.debug("speed {}".format(speed))
+
+
+
+
+
             slot_time = math.ceil(length / speed)# Ceil: Round up
-            self.logger.debug("slot_time traveling: {}".format(slot_time))
+
 
             # Discover if nodeB is turnNone
             if(nodeB != nodeC): #if nodeB == nodeC means that is the final node
                 try:
                     current_edge = (nodeA, nodeB, 0)
                     next_edge = (nodeB, nodeC, 0)
-                    self.logger.debug("DISCOVER turnAngle between current edge {} and next edge {}".format(current_edge, next_edge))
+
                     int_angle_dict = eval(edges.iloc[edge_index, settings.INDEX_NP_EDGES_INTANGLE])
-                    self.logger.debug("int_angle_dict: {}".format(int_angle_dict))
+
                     int_angle = int_angle_dict[next_edge]
-                    self.logger.debug("int_angle: {}".format(int_angle))
+
 
                     if int_angle < 180 - int(self.angle_cutoff):
-                        self.logger.info("nodeB {} is turnNone".format(nodeB))
+
 
                         if (int_angle >= 25 and int_angle < 100):
                             turn_duration = settings.S2_TURNNODE_OCCUPATION_TIME_PASS
@@ -637,14 +629,11 @@ class RoutingAlgorithm():
                         else:
                             turn_duration = settings.DEFAULT_TURNNODE_OCCUPATION_TIME_PASS
 
-                        self.logger.debug("int_angle {} < angle_cutoff (180-{}) so is turnNode; add turn_duration {} to slot_time".format(int_angle, self.angle_cutoff, turn_duration))
+
 
 
 
                         slot_time = slot_time + int(turn_duration)
-                        self.logger.debug("new slot_time traveling considering turnNode: {}".format(slot_time))
-                    else:
-                        self.logger.debug("nodeB {} is NOT turnNone".format(nodeB))
 
                 except Exception as e:
                     self.logger.critical(e)
@@ -656,7 +645,7 @@ class RoutingAlgorithm():
             else:
                 return slot_time
 
-    @logger.catch
+
     def elevatorNodes(self, orig_nodeId, fp, isFirstLayer, isLastLayer, ascenso, glist, g_cont):
 
         # nodes and edges of LAYER_A are those corresponding to the current layer g_cont
@@ -664,18 +653,18 @@ class RoutingAlgorithm():
         # always checking from source that the transitions g_cont+1 and g_cont-1 respectively are possible (to avoid indexOutOfRange glist)
 
 
-        self.logger.debug("Origin node in the elevator: {}".format(str(orig_nodeId)))
-        self.logger.debug("isFirstLayer: {}".format(str(isFirstLayer)))
-        self.logger.debug("isLastLayer: {}".format(str(isLastLayer)))
-        self.logger.debug("ascending: {}".format(str(ascenso))) #'UP': true or 'DOWN': false
+
+
+
+
 
         if (ascenso):
             index_layerB = g_cont + 1
         else:
             index_layerB = g_cont - 1
 
-        self.logger.info("index_layerA (g_cont): {}".format(g_cont))
-        self.logger.info("index_layerB: {}".format(index_layerB))
+
+
 
         nodesLayerA, edgesLayerA = ox.graph_to_gdfs(glist[g_cont])
         nodesLayerB, edgesLayerB = ox.graph_to_gdfs(glist[index_layerB])
@@ -687,18 +676,18 @@ class RoutingAlgorithm():
 
         try:
             ocupation_tuples_layerA = list(eval(nodesLayerA.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION]))  # TODO: LOC CALL
-            self.logger.info("ocupation_tuples_layerA: {}".format(ocupation_tuples_layerA))
+
         except:
             ocupation_tuples_layerA = [None]
 
         try:
             ocupation_tuples_layerB = list(eval(nodesLayerB.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION]))  # TODO: LOC CALL
-            self.logger.info("ocupation_tuples_layerB: {}".format(ocupation_tuples_layerB))
+
         except:
             ocupation_tuples_layerB = [None]
 
         if (ascenso):  # if ascending in the elevator
-            self.logger.info("ASCENDING...")
+
             self.ALTITUDE_CHANGES_ASCENDING += 1
 
             # We calculate the occupancy tuple of the destination node we are going to based on the origin node we start from
@@ -706,22 +695,22 @@ class RoutingAlgorithm():
 
             if(isFirstLayer): # If I haven't really taken off yet. I start from layer 0, I take the takeoff time as tinit too
                 tinit = int(self.get_sec(str(fp[settings.DEPARTURE_INDEX]))) # we take initial takeoff time (departure_time)
-                self.logger.debug("tinit {} by the if".format(tinit))
+
 
             elif (ocupation_tuples_layerA == [None] or ocupation_tuples_layerA == ""):  # no tuple assigned yet, first time ascending occurs
                 tinit = int(self.get_sec(str(fp[settings.DEPARTURE_INDEX]))) # we take initial takeoff time (departure_time)
-                self.logger.debug("tinit {} by the elif".format(tinit))
+
 
             else:  # con tupla previa
                 lastOcupation = eval(ocupation_tuples_layerA[-1])
                 tinit = lastOcupation[1]
-                self.logger.debug("tinit {} by the else".format(tinit))
 
-            self.logger.debug("tinit is {}".format(tinit))
+
+
 
 
         else: # if descending in the elevator
-            self.logger.info("DESCENDING...")
+
             self.ALTITUDE_CHANGES_DESCENDING += 1
 
             # We calculate the occupancy tuple of the destination node we are going to based on the origin node we start from
@@ -730,7 +719,7 @@ class RoutingAlgorithm():
             # ALWAYS with previous tuple because it is assumed that I have already ascended
             lastOcupation = eval(ocupation_tuples_layerA[-1])
             tinit = lastOcupation[1]
-            self.logger.debug("tinit is {}".format(tinit))
+
 
 
         # We calculate tuples of time of departure and arrival of the elevator
@@ -746,7 +735,7 @@ class RoutingAlgorithm():
         tiB = tiA
         tfB = tfA
         tupleB = (tiB, tfB)
-        self.logger.info("elevatorNodes() output with tupleA (tiA,tfA) {} and tupleB (tiB,tfB) {}".format(tupleA, tupleB))
+
 
 
         # Whether ascending or descending, I check if nodeB is Free (which has the same id as starting nodeA = orig_nodeId) but on the other layer:
@@ -763,47 +752,47 @@ class RoutingAlgorithm():
             # # We lock nodeA of source layer
             # if (ocupation_tuples_layerA == [None] or ocupation_tuples_layerA == ""):
             #     aux = [str(tupleA)]
-            #     self.logger.debug(str(aux))
+            #
             #     nodesLayerA.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION] = str(aux)  # Insert node ocupation field
             # else:
             #     aux = str(tupleA)
             #     ocupation_tuples_layerA.append(aux)
-            #     self.logger.debug(str(ocupation_tuples_layerA))
+            #
             #     nodesLayerA.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION] = str(ocupation_tuples_layerA)  # Update node ocupation field
-            # self.logger.info("Updated/locked origin node {} for layer altitude change ({})".format(str(orig_nodeId),g_cont))
+            #
             # # Update grafoA
             # glist[g_cont] = ox.graph_from_gdfs(nodesLayerA, edgesLayerA)
 
             # We block destination layer nodeB
             if (ocupation_tuples_layerB == [None] or ocupation_tuples_layerB == ""):
                 aux = [str(tupleB)]
-                self.logger.debug(str(aux))
+
                 nodesLayerB.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION] = str(aux)  # Insert node ocupation field
             else:
                 aux = str(tupleB)
                 ocupation_tuples_layerB.append(aux)
-                self.logger.debug(str(ocupation_tuples_layerB))
+
                 nodesLayerB.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION] = str(ocupation_tuples_layerB)  # Update node ocupation field
-            self.logger.info("Updated/locked destination node {} for layer altitude change ({})".format(str(orig_nodeId),index_layerB))
+
             # Update grafoB
             glist[index_layerB] = ox.graph_from_gdfs(nodesLayerB, edgesLayerB)
             return glist
 
-    @logger.catch
+
     def delayPendingFplan(self, fplan):
         if (fplan[settings.STATUS_INDEX] == settings.PENDING_STATUS):  # We delay the takeoff time to fplan PENDING
             current_departure_time = self.get_sec(fplan[settings.DEPARTURE_INDEX])
             delay = current_departure_time + settings.DEPARTURE_DELAY
             if(delay <= settings.MAX_DELAYED_TIME):
-                self.logger.info("delay {} <= settings.MAX_DELAYED_TIME {}".format(delay,settings.MAX_DELAYED_TIME))
+
                 delayed_flight_time = self.get_min(delay)
-                self.logger.info("Fplan {} delayed with {} seconds. Format hh:mm:ss is {}".format(fplan[settings.FPLAN_ID_INDEX], delay,delayed_flight_time))
+
                 fplan[settings.DEPARTURE_INDEX] = delayed_flight_time
                 return fplan
         return None
 
 
-    @logger.catch
+
     def get_paths(self, fp_plans, glist):
         paths = []
         isFirstLayer = False
@@ -842,23 +831,23 @@ class RoutingAlgorithm():
 
             while(g_cont < len(glist)):
 
-                self.logger.info("Enter in while loop with g_cont: {}".format(g_cont))
+
                 if (cont is False):  # if cont passes to False it means that we have found a path or it has been impossible to assign that fp and we break this for loop to go to the next fplan
-                    self.logger.info("Break while to evaluate next fplan!")
+
                     break
 
                 if (g_cont == 0):
                     isFirstLayer = True
-                    self.logger.info("YES isFirstLayer")
+
                 else:
                     isFirstLayer = False
-                    self.logger.info("NO isFirstLayer")
+
 
                 # We calculate the nearest_node with respect to the current position orig (sending_point)
                 orig_nodeId, d1 = ox.nearest_nodes(glist[g_cont], orig[1], orig[0], return_dist=True)  # (orig[1]=lon, orig[0]=lat)
 
                 if(g_cont in iv1): # I'm in a layer that corresponds to me
-                    self.logger.info("Im in a layer that corresponds to me")
+
                     g_aux = glist[g_cont]
                     edges_index_dict = {}
 
@@ -890,9 +879,9 @@ class RoutingAlgorithm():
                             # early_stop = 0
 
 
-                        self.logger.info("Num try {} fp_evaluations in get_paths()".format(early_stop))
+
                         path = self.fp_evaluations(fp, g_aux, g_cont, solution1_shortest_path)
-                        self.logger.info("path[0] after fp_evaluations attempt: {}".format(path[0]))
+
                         solution1_shortest_path = path[3]
 
                         if(path[0] == -1): # if checkingPreFlight was not valid, delay flight immediately
@@ -969,9 +958,9 @@ class RoutingAlgorithm():
                             self.edges_pesoL.clear()
 
                             # elevator down
-                            self.logger.info("Change altitude to go down to ground (until layer zero -> g_list[0]) from current layer ({})".format(g_cont))
+
                             orig_nodeId = path[0][-1]
-                            self.logger.info("Descent node for altitude change: {}".format(str(orig_nodeId)))
+
 
                             retorno = -1
                             g_cont_desc = 0
@@ -990,11 +979,11 @@ class RoutingAlgorithm():
                                     if(g_cont_desc==0): # I break loop when I hit the ground
                                         break # break loop for to descending process
 
-                                    self.logger.debug("g_cont_desc VALUE: {}".format(g_cont_desc))
-                                    self.logger.debug("i VALUE: {}".format(i))
 
-                                    self.logger.info("Altitude change (DESCENDING...) because I am in the process of landing")
-                                    self.logger.info("Origin node for altitude change: {}".format(str(orig_nodeId)))
+
+
+
+
 
                                     retorno = self.elevatorNodes(orig_nodeId, fp, isFirstLayer, isLastLayer, False, glist, g_cont_desc)
                                     if (retorno is None): # ELEVATION NOT VALID. WE HAVE TO BREAK DE FOR LOOP WITH DESCENDING PROCESS
@@ -1019,8 +1008,8 @@ class RoutingAlgorithm():
                                     continue
 
                             else: # here it enters when g_cont_desc is already 0
-                                self.logger.debug("g_cont is: {}".format(g_cont))
-                                self.logger.debug("g_cont_desc is: {}".format(g_cont_desc))
+
+
                                 aux_glist = glist[g_cont_desc]
                                 # We have reached the "ground" layer (the lowest)
                                 # we are at the lowest layer, we don't have to descend any further, we are at the final and destination node
@@ -1039,10 +1028,10 @@ class RoutingAlgorithm():
 
                                 try:
                                     ocupation_orig_nodeId = nodesLowestLayerA.iloc[orig_nodeId, settings.INDEX_NP_NODES_OCUPATION]
-                                    self.logger.debug("Query last node {}: {} ".format(orig_nodeId, ocupation_orig_nodeId))
+
                                     aux_list = eval(ocupation_orig_nodeId)[-1]
                                     fplan_arrivaltime = eval(aux_list)[1]
-                                    self.logger.info("fplan_arrivaltime: {}".format(fplan_arrivaltime))
+
                                 except:
                                     self.logger.critical("ERROR: ocupation_orig_nodeId is empty: {}".format(ocupation_orig_nodeId))
 
@@ -1053,7 +1042,7 @@ class RoutingAlgorithm():
 
                                 for node_id in path[0]: # for to pad all tuples to the same height for all node_id
                                     dict_nodes_alt[node_id] = (alt_actual_layer,)
-                                self.logger.debug(dict_nodes_alt)
+
 
                                 paths.append((dict_nodes_alt, fp[settings.FPLAN_ID_INDEX], fp[settings.DEPARTURE_INDEX], fp[settings.VEHICLE_INDEX]))
                                 self.mainApp.buildScenarioUnitary(g_cont,dict_nodes_alt,fp[settings.FPLAN_ID_INDEX], fp[settings.DEPARTURE_INDEX], fp[settings.PRIORITY_INDEX], str(fplan_arrivaltime), str(fp[settings.VEHICLE_INDEX]), fp, edges_index_dict)
@@ -1076,10 +1065,10 @@ class RoutingAlgorithm():
 
 
                         else: # I am in a layer where there is no possible route, I change altitude (ASCENDING...)
-                            self.logger.info("Altitude change because there is no path possible on that layer")
+
                             self.bool_has_change_altitude = True
                             self.LAYER_CHANGES_NO_ROUTE += 1
-                            self.logger.info("Origin node for hange altitude: {}".format(str(orig_nodeId)))
+
 
                             if (g_cont + 1 < len(glist)):  # There are free layers above
                                 retorno = self.elevatorNodes(orig_nodeId, fp, isFirstLayer, isLastLayer, True, glist,g_cont)
@@ -1107,10 +1096,10 @@ class RoutingAlgorithm():
                                 break  # IMPORTANT: BREAK WHILE TO CONTINUE WITH OTHER FPLAN
 
                 else: # I am in a layer that does not correspond to me, I change altitude (ASCENDING...)
-                    self.logger.info("Altitude change (ASCENDING...) because the layer for the type of UAV does not correspond")
+
                     self.bool_has_change_altitude = True
                     self.LAYER_CHANGES_NO_TYPE += 1
-                    self.logger.info("Origin node for height change: {}".format(str(orig_nodeId)))
+
 
                     if (g_cont + 1 < len(glist)):  # There are free layers above
                         retorno = self.elevatorNodes(orig_nodeId, fp, isFirstLayer, isLastLayer, True, glist, g_cont)
@@ -1137,10 +1126,10 @@ class RoutingAlgorithm():
 
 
                 g_cont += 1
-                self.logger.info("g_cont incremented: {}".format(g_cont))
+
         return paths
 
-    @logger.catch
+
     def fp_evaluations(self, fp, G, layer_index, solution1_shortest_path): # horizontal movements. layer_index the index (g_cont) of the current layer (it marks the altitude where we are)
         nodes_route = None
         edges_index_dict = {}  # key (nodeA, nodeB, k) and value index in geodataframe
@@ -1176,7 +1165,7 @@ class RoutingAlgorithm():
                         #First of all, check if nodeA can operate on the layers according to their take off time
                         if(layer_index == 0): # if we are in first layer
                             node_slot_time = (int(departure_time), int(departure_time + settings.ASCENSDING_TAKEOFF+(settings.NODE_OCCUPATION_TIME_VERT * 2))) # is the estimated ascending ocupation in the elevator from the takeoff to the upper layer (3layers/type, so 2 segments)
-                            self.logger.info("CHECKING PREFLIGHT...")
+
 
                             if(self.nodeIsFree(nodeA, node_slot_time, nodes)): # if True, preflight approved to this departure_time
                                 self.logger.success('Preflight approved to this departure_time. Continue process')
@@ -1207,11 +1196,8 @@ class RoutingAlgorithm():
 
                             if(ocupation_tuples != [None] and ocupation_tuples != ""):
                                 aux_list_nodes_enplanta = eval(ocupation_tuples[-1])
-                                self.logger.debug("aux_list_nodes_enplanta: {}".format(aux_list_nodes_enplanta))
+
                                 lastTimeCheckpoint = aux_list_nodes_enplanta[1]
-                                self.logger.debug("lastTimeCheckpoint (based on current occupancy tuple; I am NOT at home layer or going up; layer_index is {}): {}".format(layer_index,lastTimeCheckpoint))
-                        else:
-                            self.logger.debug("lastTimeCheckpoint (based on takeoff time; If I am in the start layer; Im in {}): {}".format(layer_index,lastTimeCheckpoint))
 
                         index_aux = 0
                         edge_index = None
@@ -1223,20 +1209,20 @@ class RoutingAlgorithm():
                             if(index_aux < len(nodes_route)-2): # if is possible positioning the nodeC one futher
                                 nodeC = nodes_route[index_aux+2]
 
-                            self.logger.debug("nodeA: {}".format(nodeA))
-                            self.logger.debug("nodeB: {}".format(nodeB))
-                            self.logger.debug("nodeC: {}".format(nodeC))
 
-                            self.logger.debug("Next step...")
+
+
+
+
 
                             if(nodeA == nodeB): #Si es el mismo nodo, continuo a la siguiente iteración del for
-                                self.logger.debug("nodeA ({})y nodeB ({}) are equals; continue next iteration loop for".format(nodeA, nodeB))
+
                                 continue
 
                             # Calculate edge_index and add to edges_index_dict={}
                             edge_index = list(edges.index.values).index((nodeA, nodeB, 0))
                             edges_index_dict[(nodeA, nodeB, 0)] = edge_index
-                            self.logger.info("edges_index_dict[{}] = {}".format((nodeA, nodeB, 0), edge_index))
+
 
 
                             timestamp_nodeA = lastTimeCheckpoint
@@ -1246,17 +1232,17 @@ class RoutingAlgorithm():
                                 return (None, G, edges_index_dict, nodes_route)
 
                             else:
-                                self.logger.debug("travel_time from A {} to B {}: {}".format(nodeA, nodeB, time))
+
                                 timestamp_nodeB = timestamp_nodeA + time + settings.NODE_OCCUPATION_TIME_PASS
-                                self.logger.debug("timestamp_nodeB (timestamp_nodeA+traveltime+NODE_OCCUPATION_TIME_PASS) {}".format(timestamp_nodeB))
+
 
                                 if(contNodesEval == 0 and layer_index == 0): # from origin node, we take into account both node occupations
-                                    self.logger.debug("Evaluation is from horizontal origin node (so... +NODE_OCCUPATION_TIME_PASS +ASCENSDING_TAKEOFF)")
+
                                     node_slot_time =  (int(timestamp_nodeA), int(timestamp_nodeB + settings.NODE_OCCUPATION_TIME_PASS) + int(settings.ASCENSDING_TAKEOFF)) # How much time does the node occupy and how long does it take to cross the street?
                                 else: # it is not from the origin node, we only take into account the occupation of the destination node
-                                    self.logger.debug("Evaluation is NOT from horizontal origin node")
+
                                     node_slot_time =  (int(timestamp_nodeA), int(timestamp_nodeB)) # How much time does the node occupy and how long does it take to cross the street?
-                                self.logger.info("node_slot_time of {}: {}".format(node_id,node_slot_time))
+
 
                                 if(self.nodeIsFree(nodeA, node_slot_time, nodes) and self.nodeIsFree(node_id, node_slot_time, nodes)):# Free Node origen (nodeA) and destination(nodeB = node_id)
                                     edge_slot_time = node_slot_time # The occupation time of the street will be the same as the occupation time of the nodes that make it up
@@ -1264,20 +1250,18 @@ class RoutingAlgorithm():
                                     if(self.edgeIsFree(nodeA, nodeB, edge_slot_time, edges, edge_index)):# Free Edge
 
                                         if(nodeA != nodeB):
-                                            self.logger.debug("nodeA ({}) y nodeB ({}) son distintos ".format(nodeA,nodeB))
+
                                             contNodesEval +=1
                                             #Assign tuple NodeA
                                             nodes_time[nodeA] = str(node_slot_time) # is a node occupancy time tuple
-                                            self.logger.debug("nodes_time[nodeA]: {}".format(nodes_time[nodeA]))
+
                                             #Assign tuple NodeB
                                             nodes_time[node_id] = str(node_slot_time) # is a node occupancy time tuple
-                                            self.logger.debug("nodes_time[nodeB]: {}".format(nodes_time[nodeB]))
+
                                             lastTimeCheckpoint = int(eval(nodes_time[nodeB])[1])
-                                            self.logger.debug("lastTimeCheckpoint: {}".format(lastTimeCheckpoint))
+
                                             edges_slotTime[(nodeA, nodeB, 0)] = str(edge_slot_time) # is a street occupancy time tuple
-                                            self.logger.debug("edges_slotTime[(nodeA, nodeB, 0)]: {}".format(edges_slotTime[(nodeA, nodeB, 0)]))
-                                        else:
-                                            self.logger.debug("nodeA ({}) and nodeB ({}) are equal; next in nodes_route".format(nodeA,nodeB))
+
 
 
                                     else:# Unavailable Edge
@@ -1344,7 +1328,7 @@ class ScenarioMaker():
         self.logger = logger
         self.header_added = False
 
-    @logger.catch
+
     def Drone2Scn(self, drone_id, start_time, lats, lons, turnbool, alts, priority, sta, uav, int_angle_list, turn_indexs, turn_speeds):
         # Define the lines list to be returned
         lines = []
@@ -1427,14 +1411,14 @@ class ScenarioMaker():
 
         return lines
 
-    @logger.catch
+
     def TimeToStr(self, time):
         time = round(time)
         m, s = divmod(time, 60)
         h, m = divmod(m, 60)
         return f'{h:02d}:{m:02d}:{s:02d}'
 
-    @logger.catch
+
     def qdrdist(self, latd1, lond1, latd2, lond2, mode):
         """ Calculate bearing and distance, using WGS'84
             In:
@@ -1496,7 +1480,7 @@ class ScenarioMaker():
         else:
             return qdr, d
 
-    @logger.catch
+
     def rwgs84(self, latd):
         """ Calculate the earths radius with WGS'84 geoid definition
             In:  lat [deg] (latitude)
@@ -1517,7 +1501,7 @@ class ScenarioMaker():
 
         return r
 
-    @logger.catch
+
     def Dict2Scn(self, filepath, dictionary, priority, sta, uav, int_angle_list, turn_indexs, turn_speeds):
 
 
@@ -1581,7 +1565,7 @@ class PathPlanner():
     ''' PathPlanner new entity object for BlueSky. '''
 
 
-    @logger.catch
+
     def __init__(self, G, angle_cutoff=25):
         self.G = G
         # get edge geodataframe
@@ -1602,7 +1586,7 @@ class PathPlanner():
         # get angle cutoff to label turns as turnbool
         self.angle_cutoff = angle_cutoff
 
-    @logger.catch
+
     def route(self, osmid_route):
 
         # get_correct_order of edges inside graph and reverese linestring geometry if necessary
@@ -1622,7 +1606,7 @@ class PathPlanner():
             # check if geometry is in correct direction. if not flip geometry
             # use node of route to check in which  if it lines up with edge linestring
             line_geom = list(self.edge_gdf.loc[edge, 'geometry'].coords)
-            logger.debug("\nline_geom of edge {} is: {}".format(edge, line_geom))
+
 
             aux_geom = self.node_gdf.loc[osmid_route[idx], 'geometry']
             aux_lat = aux_geom.y
@@ -1631,7 +1615,7 @@ class PathPlanner():
             aux_lon = aux_geom.x
             #aux_lon = self.node_gdf.apply(lambda gdf: gdf['geometry'].x, axis=1)
             lon_node = normal_round(aux_lon,6)
-            logger.debug("\nlon_node {} and lat_node {}".format(lon_node, lat_node))
+
 
             #Round to 6decimals
             new_line_geom = []
@@ -1646,10 +1630,10 @@ class PathPlanner():
             nodeB_edge = osmid_route[idx + 1]
             node_geom_list[nodeA_edge] = line_geom[0] #added nodeA with position (latA, lonA) extracted of the edge (nodeA, nodeB, 0)
             node_geom_list[nodeB_edge] = line_geom[-1] #added nodeB with position (latB, lonB) extracted of the edge (nodeA, nodeB, 0)
-            logger.debug("\nnodeA_edge {} with {} and nodeB_edge {} with {}".format(nodeA_edge,node_geom_list[nodeA_edge], nodeB_edge, node_geom_list[nodeB_edge]))
 
 
-            logger.debug("CHECKING if {} == {} and {} == {}".format(lon_node, node_geom_list[nodeA_edge][0], lat_node, node_geom_list[nodeA_edge][1]))
+
+
             if not (lon_node == node_geom_list[nodeA_edge][0] and lat_node == node_geom_list[nodeA_edge][1]):
                 logger.warning("REVERSE becouse line_geom of edge {} was: {}".format(edge, line_geom))
                 wrong_geom = line_geom
@@ -1717,23 +1701,18 @@ class PathPlanner():
                 last_lon = lon
 
 
-        logger.debug("lon_lat_list: {}".format(lon_lat_list))
-        logger.debug("len(lon_lat_list): {}".format(len(lon_lat_list)))
-        logger.debug("lat_list: {}".format(lat_list))
-        logger.debug("len(lat_list): {}".format(len(lat_list)))
-        logger.debug("lon_list: {}".format(lon_list))
-        logger.debug("len(lon_list): {}".format(len(lon_list)))
+
+
+
+
+
+
 
         turn_bool, turn_speeds, turn_coords, int_angle_list = self.get_turn_arrays(lat_list, lon_list)
 
         turn_speeds = turn_speeds.tolist()
         turn_speeds = list(filter(lambda num: num != 0, turn_speeds))
 
-        logger.info("turn_bool: {} and len {}".format(turn_bool, len(turn_bool)))
-        logger.info("turn_speeds: {} and len {}".format(turn_speeds, len(turn_speeds)))
-        logger.info("turn_coords: {} and len {}".format(turn_coords, len(turn_coords)))
-        logger.info("int_angle_list: {} and len {}".format(int_angle_list, len(int_angle_list)))
-        logger.info("self.angle_cutoff: {}".format(self.angle_cutoff))
 
         # find indices of turn_nodes
         turn_indices = []
@@ -1743,14 +1722,12 @@ class PathPlanner():
                 turn_indices.append(index_turn)
             index_turn+=1
 
-        logger.info("turn_indices: {} and len {}".format(turn_indices, len(turn_indices)))
-
 
         # for turn_node in turn_node_list:
         #     # Find lat lon of current turn node
         #     lat_node = node_geom_list[turn_node][1]
         #     lon_node = node_geom_list[turn_node][0]
-        #     logger.debug("\nlon_node {} and lat_node {}".format(lon_node, lat_node))
+        #
         #
         #     try:
         #         index_turn = lon_lat_list.index(f'{lon_node}-{lat_node}')
@@ -1892,7 +1869,7 @@ class Settings():
         self.ROOT_OUTPUT_SCN ="scenario/"
         self.OUTPUT_SCN = "_result_01-02-22_H13-05_laptopJPG.scn"
         self.LOGS_FOLDER = "./data/output/logs"
-        self.LOG_LEVEL = "SUCCESS"
+        self.LOG_LEVEL = "CRITICAL"
         self.RECEPTION_TIME_FP_INDEX = 0
         self.FPLAN_ID_INDEX = 1
         self.VEHICLE_INDEX = 2
