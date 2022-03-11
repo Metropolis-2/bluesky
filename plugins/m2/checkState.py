@@ -609,8 +609,8 @@ class checkState(core.Entity):
 
 if rerouting:
     # Set accordingly
-    GRAPH_LOCATION = 'plugins\\m2\\graphs'
-    AIRCRAFT_LOCATION = 'data\\performance\\OpenAP\\rotor\\aircraft.json'
+    GRAPH_LOCATION = 'plugins/m2/graphs'
+    AIRCRAFT_LOCATION = 'data/performance/OpenAP/rotor/aircraft.json'
 
     # list all graphs in GRAPH_LOCATION
     graphs = []
@@ -771,7 +771,7 @@ if rerouting:
     graphs_dict = {}
     for i in graphs:
         j = i.rstrip(".gpkg")
-        graphs_dict[j] = read_graph(GRAPH_LOCATION + '\\' + i)
+        graphs_dict[j] = read_graph(GRAPH_LOCATION + '/' + i)
 
     # load aircraft data
     aircraft = json.load(open(AIRCRAFT_LOCATION))
