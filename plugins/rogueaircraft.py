@@ -26,6 +26,9 @@ def init_plugin():
     # init_plugin() should always return a configuration dict.
     return config
 
+# initialize random generator
+rng = None
+
 class RogueTraffic(Entity):
 
     def __init__(self):
@@ -65,10 +68,13 @@ class RogueTraffic(Entity):
 
     @staticmethod
     @stack.command
-    def roguelevel(level:'int'):
-        '''Set the number of concurrent rogue aircrafts.'''
+    def roguelevel(level:'int', randomseed:'int'):
+        '''Set the number of concurrent rogue aircrafts and random seed'''
         
         bs.traf.roguetraffic.rogue_level = level
+
+        global rng
+        rng = np.random.default_rng(randomseed)
 
     def update(self):
         '''Update the rogue aircraft.'''
@@ -86,10 +92,10 @@ class RogueTraffic(Entity):
             existing_acids = set(np.array(bs.traf.id)[bs.traf.roguetraffic.rogue_bool])
 
             # get a numpy array of the potential acids
-            potential_acids =  np.array(list(self.potential_acids - existing_acids))
+            potential_acids =  np.sort(np.array(list(self.potential_acids - existing_acids)))
 
             # randomly select n_rogues_to_create from potential acids
-            selected_acids = np.random.choice(potential_acids, n_rogues_to_create, replace=False)
+            selected_acids = rng.choice(potential_acids, n_rogues_to_create, replace=False)
 
             # loop through the selected acids and create them
             for acid in selected_acids:
