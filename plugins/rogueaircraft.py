@@ -36,6 +36,7 @@ class RogueTraffic(Entity):
 
         self.rogue_level = 0
         self.potential_acids = {f'R{i}' for i in range(0,408)}
+        self.time_between_aircraft = 0
 
         with self.settrafarrays():
             self.rogue_bool = np.array([], dtype=np.bool8)
@@ -75,12 +76,43 @@ class RogueTraffic(Entity):
 
         global rng
         rng = np.random.default_rng(randomseed)
+        
+        # We want to spawm the first rogue aircraft over the first 15 minutes of the simulation
+        bs.traf.roguetraffic.time_between_aircraft = 900 / level
 
     def update(self):
         '''Update the rogue aircraft.'''
+        # If we're past 1 hour of simulation time, skip
+        if bs.sim.simt > 3600:
+            return
 
         # get the number of rogue aircrafts
         nrogue = np.sum(bs.traf.roguetraffic.rogue_bool)
+        
+        # If we're in the first 15 minutes, spawn aircraft according to time_between_aircraft
+        if bs.sim.simt < 900:
+            # Check how many aircraft should be spawned by now
+            nrogue_should = int(bs.sim.simt / bs.traf.roguetraffic.time_between_aircraft)
+            
+            # Check how many aircraft we need to spawn
+            n_rogues_to_create = nrogue_should - nrogue
+            
+            # If greater than 0, spawn the rogue aircraft
+            if n_rogues_to_create > 0:
+                # get the acids of the flying rogue airctaft
+                existing_acids = set(np.array(bs.traf.id)[bs.traf.roguetraffic.rogue_bool])
+
+                # get a numpy array of the potential acids
+                potential_acids =  np.sort(np.array(list(self.potential_acids - existing_acids)))
+
+                # randomly select n_rogues_to_create from potential acids
+                selected_acids = rng.choice(potential_acids, n_rogues_to_create, replace=False)
+
+                # loop through the selected acids and create them
+                for acid in selected_acids:
+                    stack.stack(f'PCALL rogues/{acid}.scn')
+                    
+            return
 
         # if there are less aircraft than the specified number of rogue aircraft create them.
         if nrogue < bs.traf.roguetraffic.rogue_level and bs.traf.ntraf != nrogue:
