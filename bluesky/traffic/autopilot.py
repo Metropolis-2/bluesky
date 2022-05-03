@@ -634,7 +634,7 @@ class Autopilot(Entity, replaceable=True):
 
             return rtacas
         else:
-            return False
+            return bs.traf.perf.vmax[idx]
 
     @stack.command(name='ALT')
     def selaltcmd(self, idx: 'acid', alt: 'alt', vspd: 'vspd'=None):
