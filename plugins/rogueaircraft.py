@@ -42,7 +42,10 @@ class RogueTraffic(Entity):
             self.rogue_bool = np.array([], dtype=np.bool8)
 
         bs.traf.roguetraffic = self
-
+        
+    def reset(self):
+        bs.traf.roguetraffic.rogue_level = 0
+        bs.traf.roguetraffic.time_between_aircraft = 0
 
 
     def create(self, n=1):
@@ -84,6 +87,9 @@ class RogueTraffic(Entity):
         '''Update the rogue aircraft.'''
         # If we're past 1 hour of simulation time, skip
         if bs.sim.simt > 3600:
+            return
+        
+        if bs.traf.roguetraffic.rogue_level == 0 or bs.traf.roguetraffic.time_between_aircraft == 0:
             return
 
         # get the number of rogue aircrafts
