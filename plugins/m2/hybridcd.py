@@ -163,6 +163,12 @@ class hybridcd(ConflictDetection):
             #idx of ownship and intruder
             idxown, idxint = traf.id2idx(conflict)
             
+            # ignore rogue aircraft intent
+            if traf.id[idxown][0] == 'R' or traf.id[idxint][0] == 'R':
+                changeactive[idxown] = True
+                changeactive[idxint] = True
+                continue
+
             # minimum horizontal separation 
             rpz = max(conf.rpz[idxown],conf.rpz[idxint])#*1.05
             hpz = max(conf.hpz[idxown],conf.hpz[idxint])

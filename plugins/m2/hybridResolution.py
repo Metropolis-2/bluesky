@@ -82,6 +82,10 @@ class hybridResolution(ConflictResolution):
             idxown = ownship.id.index(ac1)
             idxint = intruder.id.index(ac2)
 
+            # rogue aircraft do not resolve
+            if traf.id[idxown][0] == 'R' and traf.id[idxint][0] == 'R':
+                continue
+
             # Check if ownship is in MACC
             if idxown in np.squeeze(MACC):
                 continue
