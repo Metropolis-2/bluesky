@@ -61,6 +61,7 @@ class ProjTraffic(Traffic):
         if data.acid != "" and len(data.wplat) > 0:
 
             # Transform data to Vienna from Valkenburg
+            data.aclat, data.aclon = self.transform_data(data.aclat, data.aclon)
             data.wplat, data.wplon = self.transform_data(np.array(data.wplat), np.array(data.wplon))
 
         super().update_route_data(data)
