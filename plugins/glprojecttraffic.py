@@ -50,23 +50,23 @@ class ProjTraffic(Traffic):
         # create a transformer for the projection
         self.transformer_m = Transformer.from_crs(4326, 3857, always_xy=True)
         self.transformer_deg = Transformer.from_crs(3857, 4326)
+                                    
+    def update_route_data(self, data):
+        ''' Update GPU buffers with route data from simulation. '''
 
-    def actdata_changed(self, nodeid, nodedata, changed_elems):
-        ''' Process incoming traffic data. '''
-        if 'ACDATA' in changed_elems:
-            data = self.project_aircraft_data(nodedata.acdata)
-            self.update_aircraft_data(data)
+        if not self.initialized:
+            return
 
-        if 'ROUTEDATA' in changed_elems:
-            self.update_route_data(nodedata.routedata)
-        if 'TRAILS' in changed_elems:
-            self.update_trails_data(nodedata.traillat0,
-                                    nodedata.traillon0,
-                                    nodedata.traillat1,
-                                    nodedata.traillon1)
+        self.route_acid = data.acid
+        if data.acid != "" and len(data.wplat) > 0:
 
-    def project_aircraft_data(self, data):
-        ''' Project aircraft data to a new area. '''
+            # Transform data to Vienna from Valkenburg
+            data.wplat, data.wplon = self.transform_data(np.array(data.wplat), np.array(data.wplon))
+
+        super().update_route_data(data)
+       
+    def update_aircraft_data(self, data):
+        ''' Update GPU buffers with new aircraft simulation data. '''
         if not self.initialized:
             return
         naircraft = len(data.lat)
@@ -74,32 +74,40 @@ class ProjTraffic(Traffic):
         if naircraft == 0:
             self.cpalines.set_vertex_count(0)
         else:
-            # Move drone to Vienna
+            # Transform data to Vienna from Valkenburg
+            data.lat, data.lon = self.transform_data(data.lat, data.lon)
 
-            # step 1: create vectors from self.xy_valkenburg to current aircraft positions
-            # step 2: scale the vectors by the self.scale_factor
-            # step 3: translate the vectors by self.xy_offset
+        # Send to superclass
+        super().update_aircraft_data(data)
 
-            # Step 1
-            # transform to UTM
-            x, y = self.transformer_m.transform(data.lon, data.lat)
+    def transform_data(self, lat, lon):
+        ''' Transform data to new area. '''
 
-            # subtract from valkenburg reference point
-            x_pos = x - self.xy_valkenburg[0]
-            y_pos = y - self.xy_valkenburg[1]
+        # Move drone to Vienna
 
-            # Step 2: scale x_pos and y_pos by self.scale_factor
-            x_pos *= self.scale_factor
-            y_pos *= self.scale_factor
+        # step 1: create vectors from self.xy_valkenburg to current aircraft positions
+        # step 2: scale the vectors by the self.scale_factor
+        # step 3: translate the vectors by self.xy_offset
 
-            # step 3: translate x_pos and y_pos from self.xy_vienna
-            x_pos += self.xy_center_vienna[0]
-            y_pos += self.xy_center_vienna[1]
+        # Step 1
+        # transform to UTM
+        x, y = self.transformer_m.transform(lon, lat)
 
-            data.lat, data.lon = self.transformer_deg.transform(x_pos, y_pos)
-            
-        return data
-    
+        # subtract from valkenburg reference point
+        x_pos = x - self.xy_valkenburg[0]
+        y_pos = y - self.xy_valkenburg[1]
+
+        # Step 2: scale x_pos and y_pos by self.scale_factor
+        x_pos *= self.scale_factor
+        y_pos *= self.scale_factor
+
+        # step 3: translate x_pos and y_pos from self.xy_vienna
+        x_pos += self.xy_center_vienna[0]
+        y_pos += self.xy_center_vienna[1]
+
+        # transform back to lat/lon and assign to data
+        return self.transformer_deg.transform(x_pos, y_pos)
+
     @stack.command
     def setrefpoint(self, *coords):
         ''' Set reference point for scenario in valkenburg. 
