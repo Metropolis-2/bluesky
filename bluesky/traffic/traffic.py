@@ -665,7 +665,7 @@ class Traffic(Entity):
         
         self.prevlospairs = set(self.cd.lospairs)
         
-    @timed_function(name='reglog', dt=30)
+    @timed_function(name='reglog', dt=1)
     def thereglog(self):
         self.reglog.log(*self.id)
         self.reglog.log(*self.alt/ft)
