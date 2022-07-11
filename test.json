@@ -1,0 +1,15 @@
+{
+      "version": "1.1.0",
+      "FlightPoints": [
+            {
+                  "Longitude": 2.48323400000001,
+                  "Latitude": 51.594611999999984,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 2.5864410000000078,
+                  "Latitude": 51.612731999999994,
+                  "AltitudeAMSL": 12.192
+            }
+      ]
+}
