@@ -1,6 +1,6 @@
 import bluesky as bs
 from bluesky.core import Entity
-import numpy as np
+from bluesky import stack
 import json
 
 from datetime import datetime
@@ -17,10 +17,6 @@ def init_plugin():
 class FlightPlanMaker(Entity):
     def __init__(self):
         super().__init__()
-
-        with self.settrafarrays():
-            self.c2c_fp_loaded = np.array([], dtype=bool)
-            self.c2c_fp_updated = np.array([], dtype=bool)
 
     def create(self, n=1):
         ''' Create is called when new aircraft are created. '''

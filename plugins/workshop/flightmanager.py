@@ -9,3 +9,16 @@ import numpy as np
 import json
 
 from datetime import datetime
+
+def init_plugin():
+    # Configuration parameters
+    flightplans = FlightManager()
+    config = {
+        'plugin_name': 'FLIGHTMANAGER',
+        'plugin_type': 'sim'
+    }
+    return config
+
+class FlightManager(Entity):
+    def __init__(self):
+        super().__init__()
