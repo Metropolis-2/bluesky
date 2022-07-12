@@ -13,15 +13,15 @@ from bluesky.tools.misc import lat2txt, lon2txt
 
 def init_plugin():
     # Instantiate C2CTelemetry entity
-    c2c_telemetry = PPRZTelemetry()
+    telemetry = FlightTelemetry()
     # Configuration parameters
     config = {
-        'plugin_name': 'PPRZ_TELEMETRY',
+        'plugin_name': 'FLIGHTTELEMETRY',
         'plugin_type': 'sim'
     }
     return config
 
-class PPRZTelemetry(Entity):
+class FlightTelemetry(Entity):
     def __init__(self):
         super().__init__()
 
