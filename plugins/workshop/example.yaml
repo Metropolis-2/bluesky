@@ -1,0 +1,97 @@
+asyncapi: '2.4.0'
+info:
+  title: Metropolis 2 drone telemetry API
+  version: '1.0.0'
+  description: Telemetry API for the drones of the Metropolis 2 demo
+servers:
+  mosquitto:
+    url: mqtt://SERVER_ADDRESS:1883
+    protocol: mqtt
+channels:
+
+  telemetry/periodic/{AC_ID}:
+    parameters:
+        AC_ID:
+          description: Id of the corresponding drone
+    subscribe:
+      summary: Receive periodic telemetry from a drone
+      description: Receiving periodic telemetry for drone with id=AC_ID
+      message:
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/PeriodicTelemetry"
+
+components:
+  schemas:
+    PeriodicTelemetry:
+      type: object
+      description: periodic telemetry message of a drone
+      properties:
+        Location:
+          $ref: "#/components/schemas/3DLocation"
+        Speed:
+          $ref: "#/components/schemas/3DSpeed"
+        FPStatus:
+         $ref: "#/components/schemas/FlightPlanStatus"
+      required:
+        - Location
+    
+    3DLocation:
+      type: object
+      description: 3D representation of a location, using EPSG:4326 for lat/lon, AMSL for altitude
+      properties:
+        Longitude:
+          type: number
+          description: Decimal degrees, <br />Signed number -> + East, - West<br />
+          example: 5.203228
+        Latitude:
+          type: number
+          description: Decimal degrees, <br >+ North of equator, - south of equator<br />
+          example: 50.792128
+        AltitudeAMSL:
+          type: number
+          description: Decimal Altitude<br />+ is up<br />Height above Average Mean Sea Level
+          example: 20.213
+      required:
+        - Latitude
+        - Longitude
+        - AltitudeAMSL
+
+    3DSpeed:
+      type: object
+      description: 3D representation of the speed of a vehicle in m/s
+      properties:
+        Vn:
+          type: number
+          description: Speed in North direction in m/s
+          example: 2.514
+        Ve:
+          type: number
+          description: Speed in East direction in m/s
+          example: 1.369
+        Vd:
+          type: number
+          description: Speed in Down direction in m/s
+          example: 0.125
+      required:
+        - Vn
+        - Ve
+        - Vd
+
+    FlightPlanStatus:
+      type: object
+      description: Status of flightplan
+      properties:
+        ActiveFlightPlan32bId:
+          type: integer
+          format: uint32
+          description: Unique 32 bit Id of the active flightplan to sync onboard fp ids with off-board fp ids
+          example: 06092019
+        WpIndex:
+          type: number
+          format: uint8
+          description: Index of the active waypoiny (next waypoint)
+          example: 7
+      required:
+        - ActiveFlightPlan32bId
+        - WpIndex

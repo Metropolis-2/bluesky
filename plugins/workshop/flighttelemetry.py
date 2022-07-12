@@ -64,7 +64,7 @@ class PPRZTelemetry(Entity):
         '''Connect paparazzi telemetry to an existing vehicle or create one'''
         # Check if vehicle with vehicle id already exists
         if acid not in bs.traf.id:
-            bs.traf.cre(acid, 'MAVIC', 0., 0., 0., 0., 0.)
+            bs.traf.cre(acid, 'M600', 0., 0., 0., 0., 0.)
         self.acid_updated = acid
 
     @timed_function(dt=0.05)
@@ -73,17 +73,17 @@ class PPRZTelemetry(Entity):
         # Check if there are messages and update
         for msg in self.mqtt_msgs:
             if msg['topic'] == 'c2c_telemetry':
-                lat = msg['lat']
-                lon = msg['lon']
-                alt = msg['alt']
-                vn = msg['vn']
-                ve = msg['ve']
-                vu = msg['vu']
+                lat = msg['Location']['Longitude']
+                lon = msg['Location']['Latitude']
+                alt = msg['Location']['AltitudeAMSL']
+                vn = msg['Speed']['Vn']
+                ve = msg['Speed']['Ve']
+                vd = msg['Speed']['Vd']
                 hdg = np.rad2deg(np.arctan2(ve, vn))
                 h_spd = np.sqrt(ve**2 + vn**2)
                 if h_spd < 0.1:
                     h_spd = 0.
-                bs.traf.move(bs.traf.id2idx(self.acid_updated), lat, lon, alt, hdg, h_spd, vu)
+                bs.traf.move(bs.traf.id2idx(self.acid_updated), lat, lon, alt, hdg, h_spd, vd)
         self.mqtt_msgs = []
         return
 
