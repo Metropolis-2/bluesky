@@ -12,14 +12,14 @@ from datetime import datetime
 
 def init_plugin():
     # Configuration parameters
-    flightplans = FlightPlan()
+    flightplans = FlightPlanMaker()
     config = {
-        'plugin_name': 'FLIGHTPLAN',
+        'plugin_name': 'FLIGHTPLANMAKER',
         'plugin_type': 'sim'
     }
     return config
 
-class FlightPlan(Entity):
+class FlightPlanMaker(Entity):
     def __init__(self):
         super().__init__()
 
