@@ -99,9 +99,6 @@ class FlightTelemetry(Entity):
                 bs.traf.last_telemetry_update[acidx] = datetime.now()
                 
         self.mqtt_msgs = []
-        
-        
-        
         return
 
 class MQTTPPRZTelemetryClient(mqtt.Client):
