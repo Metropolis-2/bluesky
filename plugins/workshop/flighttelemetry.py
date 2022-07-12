@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 import threading
 import json
 import numpy as np
+from datetime import datetime
 
 from bluesky.tools.misc import lat2txt, lon2txt
 
@@ -36,6 +37,15 @@ class FlightTelemetry(Entity):
         # Start mqtt client to read out control commands
         self.mqtt_client = MQTTPPRZTelemetryClient(self)
         self.mqtt_client.run()
+        
+        with self.settrafarrays():
+            self.last_telemetry_update = []
+            
+        bs.traf.last_telemetry_update = self.last_telemetry_update
+        
+    def create(self, n=1):
+        super().create(n)
+        self.last_telemetry_update[-1] = datetime.datetime.now()
 
     def recv_mqtt(self, payload):
         self.lock.acquire()
@@ -83,8 +93,15 @@ class FlightTelemetry(Entity):
                 h_spd = np.sqrt(ve**2 + vn**2)
                 if h_spd < 0.1:
                     h_spd = 0.
-                bs.traf.move(bs.traf.id2idx(self.acid_updated), lat, lon, alt, hdg, h_spd, vd)
+                    
+                acidx = bs.traf.id2idx(self.acid_updated)
+                bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, vd)
+                bs.traf.last_telemetry_update[acidx] = datetime.now()
+                
         self.mqtt_msgs = []
+        
+        
+        
         return
 
 class MQTTPPRZTelemetryClient(mqtt.Client):
