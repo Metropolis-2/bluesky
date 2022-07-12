@@ -22,3 +22,10 @@ def init_plugin():
 class FlightManager(Entity):
     def __init__(self):
         super().__init__()
+        
+        with self.settrafarrays():
+            self.virtual_ac = np.array([])
+            
+    def convert_to_virtual(self, acid):
+        pass
+            
