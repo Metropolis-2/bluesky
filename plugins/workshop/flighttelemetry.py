@@ -1,4 +1,5 @@
 from curses.ascii import alt
+from socket import MsgFlag
 from termios import VMIN
 import bluesky as bs
 from bluesky.core import Entity, timed_function
@@ -28,7 +29,7 @@ class FlightTelemetry(Entity):
 
         self.lock = threading.Lock()
 
-        self.acid_updated = None
+        self.real_acids = []
 
         self.mqtt_msg_buf = []
 
@@ -45,7 +46,7 @@ class FlightTelemetry(Entity):
         
     def create(self, n=1):
         super().create(n)
-        self.last_telemetry_update[-1] = datetime.datetime.now()
+        self.last_telemetry_update[-1] = datetime.now()
 
     def recv_mqtt(self, payload):
         self.lock.acquire()
@@ -69,22 +70,21 @@ class FlightTelemetry(Entity):
     def update_c2c_telemetry(self):
         return
 
-    @stack.command
     def connect_pprz_telemetry(self, acid: str):
         '''Connect paparazzi telemetry to an existing vehicle or create one'''
         # Check if vehicle with vehicle id already exists
         if acid not in bs.traf.id:
             bs.traf.cre(acid, 'M600', 0., 0., 0., 0., 0.)
-        self.acid_updated = acid
+        self.real_acids.append(acid)
 
-    @timed_function(dt=0.05)
+    @timed_function(dt=0.1)
     def update(self):
         self.copy_buffers()
         # Check if there are messages and update
         for msg in self.mqtt_msgs:
-            if msg['topic'] == 'c2c_telemetry':
-                lat = msg['Location']['Longitude']
-                lon = msg['Location']['Latitude']
+            if msg['topic'] == 'telemetry':
+                lat = msg['Location']['Latitude']
+                lon = msg['Location']['Longitude']
                 alt = msg['Location']['AltitudeAMSL']
                 vn = msg['Speed']['Vn']
                 ve = msg['Speed']['Ve']
@@ -93,10 +93,9 @@ class FlightTelemetry(Entity):
                 h_spd = np.sqrt(ve**2 + vn**2)
                 if h_spd < 0.1:
                     h_spd = 0.
-                    
-                acidx = bs.traf.id2idx(self.acid_updated)
-                bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, vd)
-                bs.traf.last_telemetry_update[acidx] = datetime.now()
+                acidx = bs.traf.id2idx(msg['acid'])
+                bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, -vd)
+                # bs.traf.last_telemetry_update[acidx] = datetime.now()
                 
         self.mqtt_msgs = []
         return
@@ -107,17 +106,24 @@ class MQTTPPRZTelemetryClient(mqtt.Client):
         self.pprz_telem_obj = pprz_telem_object
 
     def on_message(self, mqttc, obj, msg):
-        #print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))
-        if self.pprz_telem_obj.acid_updated == None:
-            return
+
         payload = json.loads(msg.payload)
-        if msg.topic == "pprz2bs/c2c_telemetry":
-            payload['topic'] = 'c2c_telemetry'
+        
+        if "telemetry/periodic/" in msg.topic:
+            # mesage comes like "telemetry/periodic/acid"
+            # extract the acid from the topic
+            payload['acid'] = msg.topic.split('/')[-1]
+            payload['topic'] = 'telemetry'
+
+            # TODO: check here that disconnected drones don't send data
+            if payload['acid'] not in self.pprz_telem_obj.real_acids:
+                self.pprz_telem_obj.connect_pprz_telemetry(payload['acid'])
+
             self.pprz_telem_obj.recv_mqtt(payload)
         
     def run(self):
-        self.connect("localhost", 1883, 60)
-        self.subscribe("pprz2bs/c2c_telemetry", 0)
+        self.connect("192.168.1.2", 1883, 60)
+        self.subscribe("telemetry/periodic/#", 0)
         rc = self.loop_start()
         return rc
 
