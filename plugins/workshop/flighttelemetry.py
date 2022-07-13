@@ -29,16 +29,17 @@ class FlightTelemetry(Entity):
 
         self.lock = threading.Lock()
 
-        self.real_acids = []
-
         self.mqtt_msg_buf = []
 
         self.mqtt_msgs = []
 
         # Start mqtt client to read out control commands
-        self.mqtt_client = MQTTPPRZTelemetryClient(self)
+        self.mqtt_client = TelemetryClient(self)
         self.mqtt_client.run()
-        
+
+        # Initialize list of real aircraft ids    
+        self.real_acids = []
+    
         with self.settrafarrays():
             self.last_telemetry_update = []
             
@@ -75,9 +76,12 @@ class FlightTelemetry(Entity):
         # Check if vehicle with vehicle id already exists
         if acid not in bs.traf.id:
             bs.traf.cre(acid, 'M600', 0., 0., 0., 0., 0.)
-        self.real_acids.append(acid)
 
-    @timed_function(dt=0.1)
+        # Append to list of real aircraft
+        self.real_acids.append(acid)
+        bs.traf.virtual_ac[bs.traf.id2idx(acid)] = False
+
+    @timed_function(dt=0.05)
     def update(self):
         self.copy_buffers()
         # Check if there are messages and update
@@ -95,12 +99,12 @@ class FlightTelemetry(Entity):
                     h_spd = 0.
                 acidx = bs.traf.id2idx(msg['acid'])
                 bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, -vd)
-                # bs.traf.last_telemetry_update[acidx] = datetime.now()
+                bs.traf.last_telemetry_update[acidx] = datetime.now()
                 
         self.mqtt_msgs = []
         return
 
-class MQTTPPRZTelemetryClient(mqtt.Client):
+class TelemetryClient(mqtt.Client):
     def __init__(self, pprz_telem_object):
         super().__init__()
         self.pprz_telem_obj = pprz_telem_object
@@ -109,10 +113,11 @@ class MQTTPPRZTelemetryClient(mqtt.Client):
 
         payload = json.loads(msg.payload)
         
+        # telemetry message comes in here
         if "telemetry/periodic/" in msg.topic:
-            # mesage comes like "telemetry/periodic/acid"
+            # message topic is "telemetry/periodic/{acid}"
             # extract the acid from the topic
-            payload['acid'] = msg.topic.split('/')[-1]
+            payload['acid'] = 'R' + msg.topic.split('/')[-1]
             payload['topic'] = 'telemetry'
 
             # TODO: check here that disconnected drones don't send data
