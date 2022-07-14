@@ -24,7 +24,7 @@ class FlightManager(Entity):
         super().__init__()
         
         with self.settrafarrays():
-            self.virtual_ac = np.array([])
+            self.virtual_ac = np.array([], dtype=bool)
             
         bs.traf.virtual_ac = self.virtual_ac
         
