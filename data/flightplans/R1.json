@@ -1,0 +1,60 @@
+{
+      "version": "1.1.0",
+      "FlightPoints": [
+            {
+                  "Longitude": 4.413378431648141,
+                  "Latitude": 52.1681548964296,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413472926648154,
+                  "Latitude": 52.168174069454636,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413511587898142,
+                  "Latitude": 52.16819244862299,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413554568523153,
+                  "Latitude": 52.168191448863524,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413571801648146,
+                  "Latitude": 52.16819585840872,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.4135731353981384,
+                  "Latitude": 52.16819343803746,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413590828523155,
+                  "Latitude": 52.16818568435875,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413664975398149,
+                  "Latitude": 52.168181546310166,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413724262898143,
+                  "Latitude": 52.16817735198143,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413797747273151,
+                  "Latitude": 52.16816517922078,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413827173523146,
+                  "Latitude": 52.16816203766609,
+                  "AltitudeAMSL": 9.144
+            }
+      ]
+}
