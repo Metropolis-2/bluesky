@@ -33,18 +33,20 @@ class FlightTelemetry(Entity):
         self.mqtt_msgs = []
 
         # Start mqtt client to read out control commands
-        self.mqtt_client = MQTTTelemetryClient(self)
+        self.mqtt_client = MQTTTelemetryClient()
         self.mqtt_client.run()
 
         # Initialize list of real aircraft ids    
         self.real_acids = []
     
         with self.settrafarrays():
+            self.pprz_ids = []
             self.last_telemetry_update = []
                     
     def create(self, n=1):
         super().create(n)
-        self.last_telemetry_update[-1] = datetime.now()
+        self.pprz_ids[-n:] = ''
+        self.last_telemetry_update[-n:] = datetime.now()
 
     def recv_mqtt(self, payload):
         self.lock.acquire()
@@ -68,15 +70,14 @@ class FlightTelemetry(Entity):
     def update_c2c_telemetry(self):
         return
 
-    def connect_pprz_telemetry(self, acid: str):
-        '''Connect paparazzi telemetry to an existing vehicle or create one'''
-        # Check if vehicle with vehicle id already exists
-        if acid not in bs.traf.id:
-            bs.traf.cre(acid, 'M600', 0., 0., 0., 0., 0.)
+    @stack.command
+    def connect_pprz_telemetry(self, acid: str, pprz_id: str):
+        '''Connect paparazzi telemetry to an existing vehicle'''
+        # Make aircraft real and connect to pprz_id
+        acidx = bs.traf.id2idx(acid)
 
-        # Append to list of real aircraft
-        self.real_acids.append(acid)
-        fm.flightmanager.virtual_ac[bs.traf.id2idx(acid)] = False
+        self.pprz_ids[acidx] = pprz_id
+        fm.flightmanager.virtual_ac[acidx] = False
 
     @timed_function(dt=0.05)
     def update(self):
@@ -84,6 +85,7 @@ class FlightTelemetry(Entity):
         # Check if there are messages and update
         for msg in self.mqtt_msgs:
             if msg['topic'] == 'telemetry':
+                # TODO: also extract the 32bit id
                 lat = msg['Location']['Latitude']
                 lon = msg['Location']['Longitude']
                 alt = msg['Location']['AltitudeAMSL']
@@ -102,9 +104,8 @@ class FlightTelemetry(Entity):
         return
 
 class MQTTTelemetryClient(mqtt.Client):
-    def __init__(self, pprz_telem_object):
+    def __init__(self):
         super().__init__()
-        self.pprz_telem_obj = pprz_telem_object
 
     def on_message(self, mqttc, obj, msg):
 
@@ -113,15 +114,17 @@ class MQTTTelemetryClient(mqtt.Client):
         # telemetry message comes in here
         if "telemetry/periodic/" in msg.topic:
             # message topic is "telemetry/periodic/{acid}"
-            # extract the acid from the topic
-            payload['acid'] = 'R' + msg.topic.split('/')[-1]
-            payload['topic'] = 'telemetry'
 
-            # TODO: check here that disconnected drones don't send data
-            if payload['acid'] not in self.pprz_telem_obj.real_acids:
-                self.pprz_telem_obj.connect_pprz_telemetry(payload['acid'])
+            # extract the pprz_id from the topic and search for it's acidx
+            pprz_id = msg.topic.split('/')[-1]
+            acidx = telemetry.pprz_ids.index(pprz_id) if pprz_id in telemetry.pprz_ids else 0
 
-            self.pprz_telem_obj.recv_mqtt(payload)
+            # If the aircraft is not connected, ignore the message
+            if acidx:
+                payload['acid'] = bs.traf.id[acidx]
+                payload['topic'] = 'telemetry'
+
+                telemetry.recv_mqtt(payload)
         
     def run(self):
         self.connect("192.168.1.2", 1883, 60)

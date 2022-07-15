@@ -36,7 +36,6 @@ class FlightPlanMaker(Entity):
             self.drone_32bid = np.array([], dtype=bool)
 
     def create(self, n=1):
-        ''' Create is called when new aircraft are created. '''
         super().create(n)
         # get a random 32bit integer ID
         random_int = random.getrandbits(32)
@@ -45,10 +44,14 @@ class FlightPlanMaker(Entity):
         while random_int in self.drone_32bid:
             random_int = random.getrandbits(32)
 
-        self.drone_32bid[:-n] = random_int
+        self.drone_32bid[-n:] = random_int
 
     def generate_c2c_fp_from_WP(self, acidx, filename=None):
         ''' Generate a C2C flight plan from waypoints. '''
+        # TODO: ensure that drone is connected in telemetry before pushning flight plan
+        
+        # Get paparazzi id of this drone
+        pprz_id = fte.telemetry.pprz_ds[bs.traf.id[acidx]]
 
         flightplan_dict = {}
         flightplan_dict["version"] = "1.1.0"
@@ -63,7 +66,7 @@ class FlightPlanMaker(Entity):
             flightplan_dict["FlightPoints"].append(flightpoint)
 
         # send json object to mqtt
-        self.mqtt_client.publish('control/flightplanupload/13', json.dumps(flightplan_dict))
+        self.mqtt_client.publish(f'control/flightplanupload/{pprz_id}', json.dumps(flightplan_dict))
         sleep(1)
 
         # Only save to file if filename is given
@@ -75,13 +78,13 @@ class FlightPlanMaker(Entity):
         return
 
     @stack.command()
-    def MAKEFLIGHTPLAN(self, acid: 'acid', fp_file: str):
+    def MAKEFLIGHTPLAN(self, acid: 'acid', fp_file: str=None):
         self.generate_c2c_fp_from_WP(acid, fp_file)
 
 
 class MQTTFPClient(mqtt.Client):
     def __init__(self):
-        mqtt.Client.__init__(self)
+        super().__init__()
     
     def run(self):
         self.connect("192.168.1.2", 1883, 60)

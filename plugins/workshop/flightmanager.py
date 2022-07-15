@@ -33,7 +33,7 @@ class FlightManager(Entity):
         
     def create(self, n=1):
         super().create(n)
-        self.virtual_ac[-1] = False
+        self.virtual_ac[-n:] = False
             
     def convert_to_virtual(self, acidx):
         self.virtual_ac[acidx] = True
@@ -43,9 +43,19 @@ class FlightManager(Entity):
     @timed_function(dt=1.0)
     def check_connections(self):
         now = datetime.now()
-        for i in range(bs.traf.ntraf):
-            time_diff = now - fte.telemetry.last_telemetry_update[i]
+        # TODO: Only fo this check for real aircraft
+        for acidx in range(bs.traf.ntraf):
+            time_diff = now - fte.telemetry.last_telemetry_update[acidx]
             # If more than 5 seconds then we convert to virtual aircraft
             if time_diff.total_seconds() > 5:
-                self.convert_to_virtual(i)
-            
+                self.convert_to_virtual(acidx)
+    
+    def updateflightplan(self):
+        ...
+        # TODO: implement update flight plan
+        # TODO: remember to send an update id if flight plan is updated
+    
+    def checkactiveflightplan(self):
+        ...
+        # TODO: implement check active flight plan.
+        # TODO: ensure that flight plan maker matches telemetry id
