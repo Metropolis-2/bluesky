@@ -9,6 +9,8 @@ from bluesky.core import Entity, timed_function
 from bluesky import stack
 from bluesky.tools.misc import lat2txt, lon2txt
 
+from plugins.workshop import flightmanager as fm
+
 telemetry = None
 
 def init_plugin():
@@ -78,7 +80,7 @@ class FlightTelemetry(Entity):
 
         # Append to list of real aircraft
         self.real_acids.append(acid)
-        bs.traf.virtual_ac[bs.traf.id2idx(acid)] = False
+        fm.flightmanager.virtual_ac[bs.traf.id2idx(acid)] = False
 
     @timed_function(dt=0.05)
     def update(self):

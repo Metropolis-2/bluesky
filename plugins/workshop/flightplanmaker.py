@@ -9,6 +9,9 @@ import bluesky as bs
 from bluesky.core import Entity
 from bluesky import stack
 
+from plugins.workshop import flightmanager as fm
+from plugins.workshop import flighttelemetry as fte
+
 flightplans = None
 def init_plugin():
     # Configuration parameters
