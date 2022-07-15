@@ -1,20 +1,19 @@
-from curses.ascii import alt
-from socket import MsgFlag
-from termios import VMIN
-import bluesky as bs
-from bluesky.core import Entity, timed_function
-from bluesky import stack
-
 import paho.mqtt.client as mqtt
 import threading
 import json
 import numpy as np
 from datetime import datetime
 
+import bluesky as bs
+from bluesky.core import Entity, timed_function
+from bluesky import stack
 from bluesky.tools.misc import lat2txt, lon2txt
+
+telemetry = None
 
 def init_plugin():
     # Instantiate C2CTelemetry entity
+    global telemetry
     telemetry = FlightTelemetry()
     # Configuration parameters
     config = {
@@ -34,7 +33,7 @@ class FlightTelemetry(Entity):
         self.mqtt_msgs = []
 
         # Start mqtt client to read out control commands
-        self.mqtt_client = TelemetryClient(self)
+        self.mqtt_client = MQTTTelemetryClient(self)
         self.mqtt_client.run()
 
         # Initialize list of real aircraft ids    
@@ -104,7 +103,7 @@ class FlightTelemetry(Entity):
         self.mqtt_msgs = []
         return
 
-class TelemetryClient(mqtt.Client):
+class MQTTTelemetryClient(mqtt.Client):
     def __init__(self, pprz_telem_object):
         super().__init__()
         self.pprz_telem_obj = pprz_telem_object

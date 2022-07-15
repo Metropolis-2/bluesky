@@ -1,18 +1,21 @@
+
+import numpy as np
+import json
+from datetime import datetime
+
 import bluesky as bs
 from bluesky.core import Entity, timed_function
 from bluesky import stack
 from bluesky.tools.aero import ft
 from bluesky.tools.geo import qdrdist
 
-import numpy as np
-
-import json
-
-from datetime import datetime
+from plugins.workshop import flightplanmaker as fp
+from plugins.workshop import flighttelemetry as telemetry
 
 def init_plugin():
     # Configuration parameters
-    flightplans = FlightManager()
+    flightmanager = FlightManager()
+    
     config = {
         'plugin_name': 'FLIGHTMANAGER',
         'plugin_type': 'sim'
@@ -41,7 +44,7 @@ class FlightManager(Entity):
     def check_connections(self):
         now = datetime.now()
         for i in range(bs.traf.ntraf):
-            time_diff = now - bs.traf.last_telemetry_update[i]
+            time_diff = now - fp.flightplans.last_telemetry_update[i]
             # If more than 5 seconds then we convert to virtual aircraft
             if time_diff.total_seconds() > 5:
                 self.convert_to_virtual(i)

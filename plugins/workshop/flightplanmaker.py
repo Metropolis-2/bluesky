@@ -1,18 +1,20 @@
-import bluesky as bs
-from bluesky.core import Entity
-from bluesky import stack
 import json
 import numpy as np
 import random
 import paho.mqtt.client as mqtt
+from datetime import datetime
 from time import sleep
 
+import bluesky as bs
+from bluesky.core import Entity
+from bluesky import stack
 
-from datetime import datetime
-
+flightplans = None
 def init_plugin():
     # Configuration parameters
+    global flightplans
     flightplans = FlightPlanMaker()
+
     config = {
         'plugin_name': 'FLIGHTPLANMAKER',
         'plugin_type': 'sim'
@@ -23,21 +25,30 @@ class FlightPlanMaker(Entity):
     def __init__(self):
         super().__init__()
 
+        self.mqtt_client = MQTTFPClient()
+        self.mqtt_client.run()
+
         with self.settrafarrays():
             self.drone_32bid = np.array([], dtype=bool)
 
     def create(self, n=1):
         ''' Create is called when new aircraft are created. '''
         super().create(n)
+        # get a random 32bit integer ID
+        random_int = random.getrandbits(32)
 
-        self.drone_32bid[:-n] = 4
+        # make sure it is not already in use, if not keep generating
+        while random_int in self.drone_32bid:
+            random_int = random.getrandbits(32)
 
-    def generate_c2c_fp_from_WP(self, acidx, filename):
-        if '.json' not in filename:
-            filename += '.json'
+        self.drone_32bid[:-n] = random_int
+
+    def generate_c2c_fp_from_WP(self, acidx, filename=None):
+        ''' Generate a C2C flight plan from waypoints. '''
+
         flightplan_dict = {}
         flightplan_dict["version"] = "1.1.0"
-        flightplan_dict["FlightPlan32bId"] = "4"
+        flightplan_dict["FlightPlan32bId"] = self.drone_32bid[acidx]
         flightplan_dict["FlightPoints"] = []
         # Loop through route and generate fp from and including avoid WP
         for i in range(bs.traf.ap.route[acidx].nwp):
@@ -46,21 +57,25 @@ class FlightPlanMaker(Entity):
             flightpoint["Latitude"] = bs.traf.ap.route[acidx].wplat[i]
             flightpoint["AltitudeAMSL"] = bs.traf.ap.route[acidx].wpalt[i]
             flightplan_dict["FlightPoints"].append(flightpoint)
-            
-        with open('data/flightplans/' + filename, 'w') as f:
-            # Save with spacing and tabs
-            json.dump(flightplan_dict, f, indent=6)
 
-        # send object
-        TestSend(flightplan_dict)
-        return True
+        # send json object to mqtt
+        self.mqtt_client.publish('control/flightplanupload/13', json.dumps(flightplan_dict))
+        sleep(1)
+
+        # Only save to file if filename is given
+        if filename is not None:
+            filename += '.json' if filename[-5:] != '.json' else ''    
+            with open(f'data/flightplans/{filename}', 'w') as f:
+                json.dump(flightplan_dict, f, indent=6)
+
+        return
 
     @stack.command()
     def MAKEFLIGHTPLAN(self, acid: 'acid', fp_file: str):
         self.generate_c2c_fp_from_WP(acid, fp_file)
 
 
-class MQTTClient(mqtt.Client):
+class MQTTFPClient(mqtt.Client):
     def __init__(self):
         mqtt.Client.__init__(self)
     
@@ -71,19 +86,5 @@ class MQTTClient(mqtt.Client):
 
     def stop(self):
         self.loop_stop()
-
-class TestSend(object):
-    def __init__(self, flight_plan_dict):
-        self.mqtt_client = MQTTClient()
-        self.mqtt_client.run()
-
-        self.fp_dict = flight_plan_dict
-
-        self.send_fp()
-    
-    def send_fp(self):
-
-        self.mqtt_client.publish('control/flightplanupload/13', json.dumps(self.fp_dict))
-        sleep(1)
 
 
