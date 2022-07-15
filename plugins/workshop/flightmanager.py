@@ -30,13 +30,16 @@ class FlightManager(Entity):
         
         with self.settrafarrays():
             self.virtual_ac = np.array([], dtype=bool)
+            self.pprz_ids = []
         
     def create(self, n=1):
         super().create(n)
         self.virtual_ac[-n:] = False
+        self.pprz_ids[-n:] = ''
             
     def convert_to_virtual(self, acidx):
         self.virtual_ac[acidx] = True
+        self.pprz_ids[acidx] = ''
         stack.stack(f'{bs.traf.id[acidx]} LNAV ON')
         return
     

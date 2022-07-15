@@ -35,17 +35,12 @@ class FlightTelemetry(Entity):
         # Start mqtt client to read out control commands
         self.mqtt_client = MQTTTelemetryClient()
         self.mqtt_client.run()
-
-        # Initialize list of real aircraft ids    
-        self.real_acids = []
     
         with self.settrafarrays():
-            self.pprz_ids = []
             self.last_telemetry_update = []
                     
     def create(self, n=1):
         super().create(n)
-        self.pprz_ids[-n:] = ''
         self.last_telemetry_update[-n:] = datetime.now()
 
     def recv_mqtt(self, payload):
@@ -76,7 +71,7 @@ class FlightTelemetry(Entity):
         # Make aircraft real and connect to pprz_id
         acidx = bs.traf.id2idx(acid)
 
-        self.pprz_ids[acidx] = pprz_id
+        fm.flightmanager.pprz_ids[acidx] = pprz_id
         fm.flightmanager.virtual_ac[acidx] = False
 
     @timed_function(dt=0.05)
@@ -117,7 +112,7 @@ class MQTTTelemetryClient(mqtt.Client):
 
             # extract the pprz_id from the topic and search for it's acidx
             pprz_id = msg.topic.split('/')[-1]
-            acidx = telemetry.pprz_ids.index(pprz_id) if pprz_id in telemetry.pprz_ids else 0
+            acidx = fm.flightmanager.pprz_ids.index(pprz_id) if pprz_id in fm.flightmanager.pprz_ids else 0
 
             # If the aircraft is not connected, ignore the message
             if acidx:
