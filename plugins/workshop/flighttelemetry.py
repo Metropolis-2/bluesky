@@ -29,9 +29,7 @@ class FlightTelemetry(Entity):
         super().__init__()
 
         self.lock = threading.Lock()
-
         self.mqtt_msg_buf = []
-
         self.mqtt_msgs = []
 
         # Start mqtt client to read out control commands
@@ -43,9 +41,7 @@ class FlightTelemetry(Entity):
     
         with self.settrafarrays():
             self.last_telemetry_update = []
-            
-        bs.traf.last_telemetry_update = self.last_telemetry_update
-        
+                    
     def create(self, n=1):
         super().create(n)
         self.last_telemetry_update[-1] = datetime.now()
@@ -100,7 +96,7 @@ class FlightTelemetry(Entity):
                     h_spd = 0.
                 acidx = bs.traf.id2idx(msg['acid'])
                 bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, -vd)
-                bs.traf.last_telemetry_update[acidx] = datetime.now()
+                self.last_telemetry_update[acidx] = datetime.now()
                 
         self.mqtt_msgs = []
         return

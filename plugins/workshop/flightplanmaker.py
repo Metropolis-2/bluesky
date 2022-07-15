@@ -27,7 +27,8 @@ def init_plugin():
 class FlightPlanMaker(Entity):
     def __init__(self):
         super().__init__()
-
+        
+        # Start mqtt client to send flight plans
         self.mqtt_client = MQTTFPClient()
         self.mqtt_client.run()
 

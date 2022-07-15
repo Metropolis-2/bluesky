@@ -30,8 +30,6 @@ class FlightManager(Entity):
         
         with self.settrafarrays():
             self.virtual_ac = np.array([], dtype=bool)
-            
-        bs.traf.virtual_ac = self.virtual_ac
         
     def create(self, n=1):
         super().create(n)
