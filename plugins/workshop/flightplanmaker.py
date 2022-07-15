@@ -49,6 +49,7 @@ class FlightPlanMaker(Entity):
     def generate_c2c_fp_from_WP(self, acidx, filename=None):
         ''' Generate a C2C flight plan from waypoints. '''
         # TODO: ensure that drone is connected in telemetry before pushning flight plan
+        # TODO: change 32bid of plan if old
         
         # Get paparazzi id of this drone
         pprz_id = fte.telemetry.pprz_ds[bs.traf.id[acidx]]
