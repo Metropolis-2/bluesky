@@ -1,0 +1,105 @@
+asyncapi: '2.4.0'
+info:
+  title: Metropolis 2 drone control API
+  version: '1.0.0'
+  description: Control API for the drones of the Metropolis 2 demo
+servers:
+  mosquitto:
+    url: mqtt://SERVER_ADDRESS:1883
+    protocol: mqtt
+channels:
+
+  control/command/{AC_ID}:
+    parameters:
+      AC_ID:
+        description: Id of the corresponding drone
+    publish:
+      summary: Execute a command to a drone with id=AC_ID
+      description: 
+        "Perform a command <br/>
+        Some examples are: <br/>
+        * Takeoff <br/>
+        * Execute Flight Plan <br/>
+        * Land here <br/>
+        * Hold"
+      message:
+        contentType: application/json
+        payload:
+          properties:
+            Command:
+              $ref: "#/components/schemas/CommandEnum"
+          required:
+            - Command
+          
+
+  control/flightplanupload/{AC_ID}:
+    parameters:
+      AC_ID:
+        description: Id of the corresponding drone
+    publish:
+      summary: Upload/Update a Flight Plan to the drone
+      description: Command used to update a flight plan to the drone with id=AC_ID
+      message: 
+        contentType: application/json
+        payload:
+          $ref: "#/components/schemas/FlightPlan"
+
+components:
+  schemas:
+
+    CommandEnum:
+      enum:
+        - TakeOff
+        - ExecuteFlightPlan
+        - LandHere
+        - Hold
+      type: string
+      description: different types of commands
+
+    FlightPlan:
+      type: object
+      properties:
+        FlightPlan32bId:
+          type: integer
+          format: uint32
+          description: Unique 32 bit Id of the flightplan to sync onboard fp ids with off-board fp ids
+          example: 06092019
+        FlightPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlightPoint"
+      required:
+        - FlightPlan32bId
+        - FlightPoints
+
+    FlightPoint:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/3DLocation"
+      properties:
+        Speed:
+          type: number
+          description: Speed to fly at waypoint in m/s, if not specified, the drone will fly its default speed or last commanded speed by the previous waypoint.
+          example: 4.5
+
+    3DLocation:
+      type: object
+      description: 3D representation of a location, using EPSG:4326 for lat/lon, AMSL for altitude
+      properties:
+        Longitude:
+          type: number
+          description: Decimal degrees, <br />Signed number -> + East, - West<br />
+          example: 5.203228
+        Latitude:
+          type: number
+          description: Decimal degrees, <br >+ North of equator, - south of equator<br />
+          example: 50.792128
+        AltitudeAMSL:
+          type: number
+          description: Decimal Altitude<br />+ is up<br />Height above Average Mean Sea Level
+          example: 20.213
+      required:
+        - Latitude
+        - Longitude
+        - AltitudeAMSL
+      
