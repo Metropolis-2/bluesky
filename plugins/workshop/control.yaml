@@ -1,7 +1,7 @@
 asyncapi: '2.4.0'
 info:
   title: Metropolis 2 drone control API
-  version: '1.0.0'
+  version: '1.0.1'
   description: Control API for the drones of the Metropolis 2 demo
 servers:
   mosquitto:
@@ -20,8 +20,8 @@ channels:
         Some examples are: <br/>
         * Takeoff <br/>
         * Execute Flight Plan <br/>
-        * Land here <br/>
-        * Hold"
+        * Hold <br/>
+        * Continue <br/>"
       message:
         contentType: application/json
         payload:

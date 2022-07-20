@@ -1,0 +1,76 @@
+{
+      "version": "1.1.0",
+      "FlightPlan32bId": "4128991694",
+      "FlightPoints": [
+            {
+                  "Longitude": 4.4132578660231445,
+                  "Latitude": 52.168465143090145,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413313739773145,
+                  "Latitude": 52.168489078684615,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413383893523132,
+                  "Latitude": 52.16848062613877,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413382449773138,
+                  "Latitude": 52.168490876493024,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.4134240310231405,
+                  "Latitude": 52.16847157997185,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413468998523143,
+                  "Latitude": 52.16846254213698,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.41350786414813,
+                  "Latitude": 52.168506919135524,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413514648523147,
+                  "Latitude": 52.168566023587516,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413552764148136,
+                  "Latitude": 52.1685626797688,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.4136104128981515,
+                  "Latitude": 52.16856627283562,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413629742898138,
+                  "Latitude": 52.168561652857306,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413660669148129,
+                  "Latitude": 52.16859291423526,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413674516648143,
+                  "Latitude": 52.16859998255222,
+                  "AltitudeAMSL": 9.144
+            },
+            {
+                  "Longitude": 4.413713531648142,
+                  "Latitude": 52.16857191464868,
+                  "AltitudeAMSL": 9.144
+            }
+      ]
+}

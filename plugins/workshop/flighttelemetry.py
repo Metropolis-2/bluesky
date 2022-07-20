@@ -41,7 +41,7 @@ class FlightTelemetry(Entity):
                     
     def create(self, n=1):
         super().create(n)
-        self.last_telemetry_update[-n:] = datetime.now()
+        # self.last_telemetry_update[-n:] = datetime.now()
 
     def recv_mqtt(self, payload):
         self.lock.acquire()
@@ -70,9 +70,9 @@ class FlightTelemetry(Entity):
         '''Connect paparazzi telemetry to an existing vehicle'''
         # Make aircraft real and connect to pprz_id
         acidx = bs.traf.id2idx(acid)
-
         fm.flightmanager.pprz_ids[acidx] = pprz_id
         fm.flightmanager.virtual_ac[acidx] = False
+        
 
     @timed_function(dt=0.05)
     def update(self):
@@ -93,7 +93,7 @@ class FlightTelemetry(Entity):
                     h_spd = 0.
                 acidx = bs.traf.id2idx(msg['acid'])
                 bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, -vd)
-                self.last_telemetry_update[acidx] = datetime.now()
+                # self.last_telemetry_update[acidx] = datetime.now()
                 
         self.mqtt_msgs = []
         return
@@ -112,11 +112,12 @@ class MQTTTelemetryClient(mqtt.Client):
 
             # extract the pprz_id from the topic and search for it's acidx
             pprz_id = msg.topic.split('/')[-1]
-            acidx = fm.flightmanager.pprz_ids.index(pprz_id) if pprz_id in fm.flightmanager.pprz_ids else 0
+            # search for index in fm.flightmanager.pprz_ids numpy array
+            acidx = np.where(fm.flightmanager.pprz_ids == pprz_id)[0] if pprz_id in fm.flightmanager.pprz_ids else None
 
             # If the aircraft is not connected, ignore the message
-            if acidx:
-                payload['acid'] = bs.traf.id[acidx]
+            if acidx is not None:
+                payload['acid'] = bs.traf.id[acidx[0]]
                 payload['topic'] = 'telemetry'
 
                 telemetry.recv_mqtt(payload)

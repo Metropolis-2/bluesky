@@ -33,7 +33,7 @@ class FlightPlanMaker(Entity):
         self.mqtt_client.run()
 
         with self.settrafarrays():
-            self.drone_32bid = np.array([], dtype=bool)
+            self.drone_32bid = np.array([], dtype=np.int32)
 
     def create(self, n=1):
         super().create(n)
@@ -52,11 +52,11 @@ class FlightPlanMaker(Entity):
         # TODO: change 32bid of plan if old
         
         # Get paparazzi id of this drone
-        pprz_id = fte.telemetry.pprz_ds[bs.traf.id[acidx]]
+        pprz_id = fm.flightmanager.pprz_ids[acidx]
 
         flightplan_dict = {}
         flightplan_dict["version"] = "1.1.0"
-        flightplan_dict["FlightPlan32bId"] = self.drone_32bid[acidx]
+        flightplan_dict["FlightPlan32bId"] = str(self.drone_32bid[acidx])
         flightplan_dict["FlightPoints"] = []
         # Loop through route and generate fp from and including avoid WP
         for i in range(bs.traf.ap.route[acidx].nwp):
