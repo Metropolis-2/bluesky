@@ -672,7 +672,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 1</string>
+            <string>TAKEOFF</string>
            </property>
           </widget>
          </item>
@@ -700,7 +700,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 2</string>
+            <string>EXECUTE</string>
            </property>
           </widget>
          </item>
@@ -728,7 +728,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 3</string>
+            <string>HOLD AC</string>
            </property>
           </widget>
          </item>
