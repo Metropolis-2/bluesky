@@ -1,146 +1,100 @@
 '''BlueSky global configuration module'''
 import re
-import os
 import sys
 import shutil
-import site
 import inspect
 from pathlib import Path
+
+
+# Default config file path
+_cfgfile = Path('settings.cfg')
+# Base path and source path
+_basepath = Path('')
+_srcpath = Path('')
+
+
+def resolve_path(path):
+    ''' Resolve a path to BlueSky-related (data) files. Adds base path to relative paths.
+
+        Arguments:
+        - path: The path to resolve
+
+        Returns:
+        - resolved path
+    '''
+    path = Path(path)
+    return path if path.is_absolute() else (_basepath / path).resolve()
 
 
 def init(cfgfile=''):
     '''Initialize configuration.
        Import config settings from settings.cfg if this exists, if it doesn't
        create an initial config file'''
-    rundir = ''
-    srcdir = ''
+       # When run from source (e.g., directly downloaded from git), both rundir and srcdir are the CWD
+    global _basepath, _srcpath
 
-    # If BlueSky is run from a compiled bundle instead of from source,
-    # adjust the startup path and change the path of
-    # configurable files to $home/bluesky
-    if getattr(sys, 'frozen', False):
-        srcdir = os.path.dirname(sys.executable)
-        rundir = os.path.join(os.path.expanduser('~'), 'bluesky')
+    # If BlueSky is run from a compiled bundle instead of from source, or installed as a package
+    # adjust the startup path and change the path of configurable files to $home/bluesky
 
-    # If BlueSky is installed as a python package the location of the data files need to
-    # be adjusted so that importing will not fail when copying config file below
-    if not os.path.isfile(os.path.join(rundir, 'data/default.cfg')):
-        # collate list of possible data install roots
-        root_dirs = site.getusersitepackages()
-        root_dirs = [root_dirs] if isinstance(root_dirs, str) else root_dirs
-        root_dirs += site.getsitepackages()
-
-        # search for bluesky shared data directory
-        found_dir = False
-        for root_dir in root_dirs:
-            dirpath = os.path.join(root_dir, 'share', 'bluesky')
-            if os.path.exists(dirpath):
-                srcdir = dirpath
-                found_dir = True
-                break
-        
-        # if the path does not exist, it's worth trying the project root. This
-        # would work if the package was cloned from the git and is installed
-        # with "pip install -e ."
-        if not found_dir:
-            srcdir = get_project_root()
-
-    datadir = os.path.join(rundir, 'data')
-    cachedir = os.path.join(rundir, 'data/cache')
-    badadir = os.path.join(rundir, 'data/performance/BADA')
-    badasrc = os.path.join(srcdir, 'data/performance/BADA')
-    perfdir = os.path.join(srcdir, 'data/performance')
-    gfxdir = os.path.join(srcdir, 'data/graphics')
-    navdir = os.path.join(srcdir, 'data/navdata')
-    scnsrc = os.path.join(srcdir, 'scenario')
-    scndir = os.path.join(rundir, 'scenario')
-    outdir = os.path.join(rundir, 'output')
-    plgsrc = os.path.join(srcdir, 'plugins')
-    plgdir = os.path.join(rundir, 'plugins')
-    configsrc = os.path.join(srcdir, 'data/default.cfg')
+    if Path(__file__) != Path.cwd() / 'bluesky/settings.py':
+        # In this case, the run dir is a (to be created) bluesky folder in the user directory
+        _basepath = Path.home() / 'bluesky'
+        # And the source dir resides in site-packages/bluesky/resources
+        _srcpath = Path(__file__).parent / 'resources'
+        # Check if basedir already exists. If not create it
+        if not _basepath.is_dir():
+            populate_basedir()
 
     if not cfgfile:
-        cfgfile = os.path.join(rundir, 'settings.cfg')
-    
-    # Check if alternate config file is passed
-    for i in range(len(sys.argv)):
-        if len(sys.argv) > i + 1:
-            if sys.argv[i] == '--config-file':
-                cfgfile = sys.argv[i + 1]
-            elif sys.argv[i] == '--scenfile':
-                globals()['scenfile'] = sys.argv[i + 1]
-
-    # Create config file if it doesn't exist yet. Ask for gui settings if bluesky
-    # was started with BlueSky.py
-    if not os.path.isfile(cfgfile):
-        print()
-        print('No config file settings.cfg found in your BlueSky starting directory!')
-        print()
-        print('This config file contains several default settings related to the simulation loop and the graphics.')
-        print('A default version will be generated, which you can change if necessary before the next time you run BlueSky.')
-        print()
-
-        with open(configsrc, 'r') as fin, open(cfgfile, 'w') as file_out:
-            for line in fin:
-                if line[:9] == 'data_path':
-                    line = "data_path = '" + datadir.replace('\\', '/') + "'\n"
-                if line[:10] == 'cache_path':
-                    line = "cache_path = '" + cachedir.replace('\\', '/') + "'\n"
-                elif line[:8] == 'log_path':
-                    line = "log_path = '" + outdir.replace('\\', '/') + "'\n"
-                elif line[:13] == 'scenario_path':
-                    line = "scenario_path = '" + scndir.replace('\\', '/') + "'\n"
-                elif line[:11] == 'plugin_path':
-                    line = "plugin_path = '" + plgdir.replace('\\', '/') + "'\n"
-                elif line[:14] == 'perf_path_bada':
-                    line = "perf_path_bada = '" + badadir.replace('\\', '/') + "'\n"
-                elif line[:9] == 'perf_path':
-                    line = "perf_path = '" + perfdir.replace('\\', '/') + "'\n"
-                elif line[:8] == 'gfx_path':
-                    line = "gfx_path = '" + gfxdir.replace('\\', '/') + "'\n"
-                elif line[:12] == 'navdata_path':
-                    line = "navdata_path = '" + navdir.replace('\\', '/') + "'\n"
-
-                file_out.write(line)
-
-    else:
-        print(f'Reading config from {cfgfile}')
-
-    exec(compile(open(cfgfile).read(), cfgfile, 'exec'), globals())
-
-    # Use the path specified in cfgfile if available
-    if 'cache_path' in globals():
-        cachedir = globals()['cache_path']
-    if 'log_path' in globals():
-        outdir = globals()['log_path']
-    if 'perf_path_bada' in globals():
-        badadir = globals()['perf_path_bada']
-    if 'scenario_path' in globals():
-        scndir = globals()['scenario_path']
-    if 'plugin_path' in globals():
-        plgdir = globals()['plugin_path']
-
-    # Update cachedir with python version-specific subfolder
-    cachedir = os.path.join(cachedir, 'py%d' % sys.version_info[0])
-    globals()['cache_path'] = cachedir
+        cfgfile = _basepath / 'settings.cfg'
+    print(f'Reading config from {cfgfile}')
+    exec(compile(open(cfgfile).read().replace('\\', '/'), cfgfile, 'exec'), globals())
 
     # Store name of config file
     globals()['_cfgfile'] = cfgfile
 
-    # Create default directories if they don't exist yet
-    for d in (outdir, cachedir):
-        if not os.path.isdir(d):
-            print('Creating directory "%s"' % d)
-            os.makedirs(d)
-    for d in [(badasrc, badadir), (scnsrc, scndir), (plgsrc, plgdir)]:
-        if not os.path.isdir(d[1]):
-            print('Creating directory "%s", and copying default files' % d[1])
-            try:
-                shutil.copytree(*d)
-            except FileNotFoundError:
+    return True
+
+
+def populate_basedir():
+    ''' Populate bluesky folder in home directory when running bluesky as a package. '''
+    # Create base path and copy default config
+    print(f'Creating BlueSky base directory "{_basepath.absolute()}"')
+    _basepath.mkdir()
+    print(f'Copying default configfile to {_basepath / "settings.cfg"}')
+    shutil.copyfile(_srcpath / 'data/default.cfg', _basepath / 'settings.cfg')
+
+    # Paths to create
+    for d in ('output', 'data/cache', 'data/performance'):
+        print(f'Creating directory "{_basepath / d}"')
+        (_basepath / d).mkdir(parents=True, exist_ok=True)
+
+    # Paths to create and populate
+    for d in ('scenario', 'plugins', 'data/performance/BADA'):
+        print(f'Creating directory "{_basepath / d}", and copying default files')
+        try:
+            shutil.copytree(_srcpath / d, _basepath / d)
+        except FileNotFoundError:
                 print('Unable to copy "%s" files to "%s"' %(d[0], d[1]), file=sys.stderr)
 
-    return True
+    # Performance paths to create symbolic links for
+    for d in (_srcpath / 'data/performance').iterdir():
+        # Skip BADA dir (which is copied), link others
+        if d.name.upper() != 'BADA':
+            symlink = _basepath / 'data/performance' / d.name
+            try:
+                symlink.symlink_to(d, target_is_directory=True)
+            except FileNotFoundError:
+                    print(f'Unable to create symbolic link "{symlink}"', file=sys.stderr)
+
+    # Other data paths to create symbolic links for
+    for d in ('data/graphics', 'data/navdata'):
+        symlink = _basepath / d
+        try:
+            symlink.symlink_to(_srcpath / d, target_is_directory=True)
+        except FileNotFoundError:
+                print(f'Unable to create symbolic link "{symlink}"', file=sys.stderr)
+
 
 _settings_hierarchy = dict()
 _settings = list()
@@ -182,17 +136,19 @@ def save(fname=None, changes=None):
     # Make a copy of the list of settings
     allsettings = list(_settings)
     # Write to a specified file if passed, else current config file
-    fname = fname or _cfgfile
+    fname = Path(fname or _cfgfile)
     # Get config file formatting from file to be updated if it exists, else get
     # it from the config file template
-    srcdir = ''
-    if getattr(sys, 'frozen', False):
-        srcdir = os.path.dirname(sys.executable)
-        if not os.path.isabs(fname):
-            fname = os.path.join(os.path.expanduser('~'), 'bluesky', fname)
+    srcdir = Path('')
+    if Path(__file__) != Path.cwd() / 'bluesky/settings.py':
+        # Source dir resides in site-packages/bluesky/resources
+        srcdir = Path(__file__).parent / 'resources'
+        if not fname.is_absolute():
+            fname = Path.home() / 'bluesky' / fname
 
-    configsrc = fname if os.path.isfile(fname) else os.path.join(srcdir, 'data/default.cfg')
-    lines = [line for line in open(configsrc, 'r')]
+    configsrc = fname if fname.is_file() else srcdir / 'data/default.cfg'
+    with open(configsrc) as f:
+        lines = f.readlines()
 
     with open(fname, 'w') as file_out:
         # first write all lines following the format of the source file
@@ -217,10 +173,3 @@ def save(fname=None, changes=None):
                 file_out.write(f'{key} = {value}\n')
 
     return True, f'Saved settings to {fname}'
-
-def get_project_root() -> str:
-    ''' Return the absolute path of the project root. '''
-
-    # return root dir relative to this file, make sure you update it if this
-    # file is moved in the project directory
-    return str(Path(__file__).absolute().parent.parent)
