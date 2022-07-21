@@ -55,15 +55,16 @@ class FlightPlanMaker(Entity):
         pprz_id = fm.flightmanager.pprz_ids[acidx]
 
         flightplan_dict = {}
-        flightplan_dict["version"] = "1.1.0"
+        flightplan_dict["version"] = "1.0.3"
         flightplan_dict["FlightPlan32bId"] = str(self.drone_32bid[acidx])
         flightplan_dict["FlightPoints"] = []
         # Loop through route and generate fp from and including avoid WP
         for i in range(bs.traf.ap.route[acidx].nwp):
             flightpoint = {}
+            flightpoint["Speed"] = bs.traf.ap.route[acidx].wplon[i]
             flightpoint["Longitude"] = bs.traf.ap.route[acidx].wplon[i]
             flightpoint["Latitude"] = bs.traf.ap.route[acidx].wplat[i]
-            flightpoint["AltitudeAMSL"] = bs.traf.ap.route[acidx].wpalt[i]
+            flightpoint["AltitudeAMSL"] = bs.traf.ap.route[acidx].wpspd[i]
             flightplan_dict["FlightPoints"].append(flightpoint)
 
         # send json object to mqtt

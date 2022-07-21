@@ -2,6 +2,7 @@
 import numpy as np
 import json
 from datetime import datetime
+from time import sleep
 
 import bluesky as bs
 from bluesky.core import Entity, timed_function
@@ -171,3 +172,5 @@ class FlightManager(Entity):
 
         # send command
         fp.flightplans.mqtt_client.publish(f'control/command/{pprz_id}', json.dumps(command_dict))
+        sleep(0.1)
+
