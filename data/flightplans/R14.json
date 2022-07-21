@@ -1,48 +1,48 @@
 {
       "version": "1.0.3",
-      "FlightPlan32bId": "3683975872",
+      "FlightPlan32bId": "2666719331",
       "FlightPoints": [
             {
-                  "Speed": 4.413252,
+                  "Speed": 1.543332,
                   "Longitude": 4.413252,
                   "Latitude": 52.168282000000005,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 6.096
             },
             {
-                  "Speed": 4.41355999999999,
+                  "Speed": 1.543332,
                   "Longitude": 4.41355999999999,
                   "Latitude": 52.168306,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 6.096
             },
             {
-                  "Speed": 4.413916999999998,
+                  "Speed": 1.543332,
                   "Longitude": 4.413916999999998,
                   "Latitude": 52.16838799999999,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 6.096
             },
             {
-                  "Speed": 4.413916999999998,
+                  "Speed": 1.543332,
                   "Longitude": 4.413916999999998,
                   "Latitude": 52.16838799999999,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 12.192
             },
             {
-                  "Speed": 4.414193000000012,
+                  "Speed": 1.543332,
                   "Longitude": 4.414193000000012,
                   "Latitude": 52.168284,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 12.192
             },
             {
-                  "Speed": 4.414139000000006,
+                  "Speed": 1.543332,
                   "Longitude": 4.414139000000006,
                   "Latitude": 52.168059,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 12.192
             },
             {
-                  "Speed": 4.414139000000006,
+                  "Speed": 1.543332,
                   "Longitude": 4.414139000000006,
                   "Latitude": 52.168059,
-                  "AltitudeAMSL": 1.543332
+                  "AltitudeAMSL": 9.144
             }
       ]
 }

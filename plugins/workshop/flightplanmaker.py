@@ -61,10 +61,10 @@ class FlightPlanMaker(Entity):
         # Loop through route and generate fp from and including avoid WP
         for i in range(bs.traf.ap.route[acidx].nwp):
             flightpoint = {}
-            flightpoint["Speed"] = bs.traf.ap.route[acidx].wplon[i]
+            flightpoint["Speed"] = bs.traf.ap.route[acidx].wpspd[i]
             flightpoint["Longitude"] = bs.traf.ap.route[acidx].wplon[i]
             flightpoint["Latitude"] = bs.traf.ap.route[acidx].wplat[i]
-            flightpoint["AltitudeAMSL"] = bs.traf.ap.route[acidx].wpspd[i]
+            flightpoint["AltitudeAMSL"] = bs.traf.ap.route[acidx].wpalt[i]
             flightplan_dict["FlightPoints"].append(flightpoint)
 
         # send json object to mqtt
