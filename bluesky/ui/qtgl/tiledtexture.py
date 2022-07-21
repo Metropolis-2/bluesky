@@ -35,7 +35,7 @@ bs.settings.set_variable_defaults(
         },
         'nasa': {
             'source': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{y}/{x}.jpg'],
-            'max_tile_zoom': 13,
+            'max_tile_zoom': 19,
             'license': 'Satellite images from NASA via ESRI'
         }
     })
