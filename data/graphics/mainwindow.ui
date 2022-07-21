@@ -672,7 +672,7 @@
             </font>
            </property>
            <property name="text">
-            <string>TAKEOFF</string>
+            <string>SEND ALL FLIGHT PLANS</string>
            </property>
           </widget>
          </item>
@@ -700,7 +700,7 @@
             </font>
            </property>
            <property name="text">
-            <string>EXECUTE</string>
+            <string>TAKEOFF ALL DRONES</string>
            </property>
           </widget>
          </item>
@@ -728,7 +728,7 @@
             </font>
            </property>
            <property name="text">
-            <string>HOLD AC</string>
+            <string>EXECUTE ALL FLIGHT PLANS</string>
            </property>
           </widget>
          </item>
@@ -756,7 +756,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 4</string>
+            <string>HOLD ALL DRONES</string>
            </property>
           </widget>
          </item>
@@ -784,7 +784,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 5</string>
+            <string>CONTINUE ALL FLIGHT PLANS</string>
            </property>
           </widget>
          </item>
@@ -812,7 +812,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Custom 6</string>
+            <string>LAND ALL DRONES</string>
            </property>
           </widget>
          </item>

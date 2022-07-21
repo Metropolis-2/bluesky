@@ -63,6 +63,12 @@ class FlightManager(Entity):
         # TODO: implement check active flight plan.
         # TODO: ensure that flight plan maker matches telemetry id
 
+    # aircraft specific commands
+    # must give acid to execute
+    @stack.command()
+    def sendfp(self, acid: 'acid', fp_file: str=None):
+        fp.flightplans.generate_c2c_fp_from_WP(acid, fp_file)
+
     @stack.command()
     def takeoffac(self, acid: str):
         '''Takeoff'''
@@ -82,6 +88,77 @@ class FlightManager(Entity):
     def continuefp(self, acid: str):
         '''Continue'''
         self.send_command(acid, "Continue")
+
+    @stack.command()
+    def landac(self, acid: str):
+        '''Land'''
+        self.send_command(acid, "Land")
+
+    # end of aircraft specifc commands
+
+    # mak global commands
+    @stack.command()
+    def sendall(self):
+        '''Make all flight plans for real aircraft'''
+        for acid in bs.traf.id[~self.virtual_ac]:
+            fp.flightplans.generate_c2c_fp_from_WP(acid)
+
+    @stack.command()
+    def takeoffall(self):
+        '''Takeoff all real aircraft'''
+        for acid in bs.traf.id[~self.virtual_ac]:
+            self.send_command(acid, "TakeOff")
+
+    @stack.command()
+    def executefpall(self):
+        '''Execute flight plan for all aircraft'''
+        for acidx, acid in enumerate(bs.traf.id):
+
+            # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                self.send_command(acid, "ExecuteFlightPlan")
+
+            else:
+                # TODO: virtual aircraft start flying
+                ...
+    
+    @stack.command()
+    def holdall(self):
+        '''Hold all aircraft'''
+        for acidx, acid in enumerate(bs.traf.id):
+
+            # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                self.send_command(acid, "Hold")
+            else:
+                # TODO: virtual aircraft hold
+                ...
+    
+    @stack.command()
+    def continueall(self):
+        '''Continue all aircraft'''
+        for acidx, acid in enumerate(bs.traf.id):
+
+            # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                self.send_command(acid, "Continue")
+            else:
+                # TODO: virtual aircraft continue route
+                ...
+
+    @stack.command()
+    def landall(self):
+        '''Land all aircraft'''
+        for acidx, acid in enumerate(bs.traf.id):
+
+            # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                self.send_command(acid, "Land")
+            else:
+                # TODO: virtual aircraft land
+                ...
+
+    # end of global aircraft commands
 
     def send_command(self, acid, command):
         

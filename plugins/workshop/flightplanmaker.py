@@ -78,10 +78,6 @@ class FlightPlanMaker(Entity):
 
         return
 
-    @stack.command()
-    def MAKEFLIGHTPLAN(self, acid: 'acid', fp_file: str=None):
-        self.generate_c2c_fp_from_WP(acid, fp_file)
-
 
 class MQTTFPClient(mqtt.Client):
     def __init__(self):

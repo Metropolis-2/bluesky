@@ -142,10 +142,12 @@ class MainWindow(QMainWindow):
                     self.showlabels : ['lbl.svg', 'Show/hide text labels', self.buttonClicked],
                     self.showmap :    ['geo.svg', 'Show/hide satellite image', self.buttonClicked],
                     self.shownodes :  ['nodes.svg', 'Show/hide node list', self.buttonClicked],
-                    self.custom1 :    ['play.svg', 'Takeoff', self.buttonClicked],
-                    self.custom2 :    ['play.svg', 'Execute flight plans', self.buttonClicked],
-                    self.custom3 :    ['hold.svg', 'Hold all drones', self.buttonClicked],
-
+                    self.custom1 :    ['send.svg', 'Send flight plans', self.buttonClicked],
+                    self.custom2 :    ['depart.svg', 'Takeoff', self.buttonClicked],
+                    self.custom3 :    ['drone_icon.svg', 'Execute flight plans', self.buttonClicked],
+                    self.custom4 :    ['pause.svg', 'Hold all drones', self.buttonClicked],
+                    self.custom5 :    ['play-solid.svg', 'Continue flight plans', self.buttonClicked],
+                    self.custom6 :    ['land.svg', 'Land all drones', self.buttonClicked],
                     }
 
         for b in buttons.items():
@@ -343,11 +345,17 @@ class MainWindow(QMainWindow):
         elif self.sender() == self.op:
             bs.net.send_event(b'STACK', 'OP')
         elif self.sender() == self.custom1:
-            bs.net.send_event(b'STACK', 'ECHO HELLO')
+            bs.net.send_event(b'STACK', 'SENDALL')
         elif self.sender() == self.custom2:
-            bs.net.send_event(b'STACK', 'ECHO HELLO')
+            bs.net.send_event(b'STACK', 'TAKEOFFALL')
         elif self.sender() == self.custom3:
-            bs.net.send_event(b'STACK', 'ECHO HELLO')
+            bs.net.send_event(b'STACK', 'EXECUTEFPALL')
+        elif self.sender() == self.custom4:
+            bs.net.send_event(b'STACK', 'HOLDALL')
+        elif self.sender() == self.custom5:
+            bs.net.send_event(b'STACK', 'CONTINUEALL')
+        elif self.sender() == self.custom6:
+            bs.net.send_event(b'STACK', 'LANDALL')
         elif self.sender() == self.fast:
             bs.net.send_event(b'STACK', 'FF')
         elif self.sender() == self.fast10:
