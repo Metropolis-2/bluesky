@@ -933,11 +933,7 @@ class Route(Replaceable):
             else:
                 alt = acrte.wpalt[wpidx]
 
-            # Check for valid Mach or CAS
-            if acrte.wpspd[wpidx] <2.0:
-                cas = mach2cas(acrte.wpspd[wpidx], alt)
-            else:
-                cas = acrte.wpspd[wpidx]
+            cas = acrte.wpspd[wpidx]
 
             # Save it for next leg
             bs.traf.actwp.nextspd[acidx] = cas
