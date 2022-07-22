@@ -66,6 +66,15 @@ class FlightManager(Entity):
 
     # aircraft specific commands
     # must give acid to execute
+
+    @stack.command
+    def connect_telemetry(self, acid: str, pprz_id: str):
+        '''Connect paparazzi telemetry to an existing vehicle'''
+        # Make aircraft real and connect to pprz_id
+        acidx = bs.traf.id2idx(acid)
+        self.pprz_ids[acidx] = pprz_id
+        self.virtual_ac[acidx] = False
+
     @stack.command()
     def sendfp(self, acid: 'acid', fp_file: str=None):
         fp.flightplans.generate_c2c_fp_from_WP(acid, fp_file)
@@ -101,14 +110,27 @@ class FlightManager(Entity):
     @stack.command()
     def sendall(self):
         '''Make all flight plans for real aircraft'''
-        for acid in bs.traf.id[~self.virtual_ac]:
-            fp.flightplans.generate_c2c_fp_from_WP(acid)
+
+        for acidx, acid in enumerate(bs.traf.id):
+
+          # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                fp.flightplans.generate_c2c_fp_from_WP(acidx)
+            else:
+                # TODO: virtual aircraft start flying
+                ...
 
     @stack.command()
     def takeoffall(self):
         '''Takeoff all real aircraft'''
-        for acid in bs.traf.id[~self.virtual_ac]:
-            self.send_command(acid, "TakeOff")
+        for acidx, acid in enumerate(bs.traf.id):
+
+          # if real aircraft send command
+            if not self.virtual_ac[acidx]:
+                self.send_command(acid, "TakeOff")
+            else:
+                # TODO: virtual aircraft start flying
+                ...
 
     @stack.command()
     def executefpall(self):

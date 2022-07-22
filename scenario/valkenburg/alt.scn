@@ -5,4 +5,5 @@
 
 00:00:00>PAN R12
 00:00:00>ZOOM 400
-00:00:00>HOLD
+
+00:00:00>connect_telemetry R12 12

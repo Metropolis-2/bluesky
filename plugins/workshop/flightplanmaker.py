@@ -7,7 +7,6 @@ from time import sleep
 
 import bluesky as bs
 from bluesky.core import Entity
-from bluesky import stack
 
 from plugins.workshop import flightmanager as fm
 from plugins.workshop import flighttelemetry as fte
@@ -50,6 +49,13 @@ class FlightPlanMaker(Entity):
         ''' Generate a C2C flight plan from waypoints. '''
         # TODO: ensure that drone is connected in telemetry before pushning flight plan
         # TODO: change 32bid of plan if old
+
+        # get a random 32bit integer ID
+        random_int = random.getrandbits(32)
+        
+        while random_int in self.drone_32bid:
+            random_int = random.getrandbits(32)
+        self.drone_32bid[acidx] = random_int
         
         # Get paparazzi id of this drone
         pprz_id = fm.flightmanager.pprz_ids[acidx]

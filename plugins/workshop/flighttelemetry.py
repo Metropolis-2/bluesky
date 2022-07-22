@@ -6,8 +6,6 @@ from datetime import datetime
 
 import bluesky as bs
 from bluesky.core import Entity, timed_function
-from bluesky import stack
-from bluesky.tools.misc import lat2txt, lon2txt
 
 from plugins.workshop import flightmanager as fm
 
@@ -64,15 +62,6 @@ class FlightTelemetry(Entity):
 
     def update_c2c_telemetry(self):
         return
-
-    @stack.command
-    def connect_pprz_telemetry(self, acid: str, pprz_id: str):
-        '''Connect paparazzi telemetry to an existing vehicle'''
-        # Make aircraft real and connect to pprz_id
-        acidx = bs.traf.id2idx(acid)
-        fm.flightmanager.pprz_ids[acidx] = pprz_id
-        fm.flightmanager.virtual_ac[acidx] = False
-        
 
     @timed_function(dt=0.05)
     def update(self):
