@@ -124,7 +124,7 @@ class ValkTraffic(Traffic):
                                  (0.0,             0.8 * wpt_size),
                                  (-0.2 * wpt_size,  0.2 * wpt_size),
                                  (-0.8 * wpt_size,  0.0)], dtype=np.float32)
-        self.rwaypoints.create(vertex=rwptvertices, color=palette.route)
+        self.rwaypoints.create(vertex=rwptvertices, color=self.route_color)
         self.rwaypoints.set_attribs(lat=self.routelbl.lat, lon=self.routelbl.lon, instance_divisor=1)
 
         # # --------Aircraft Trails------------------------------------------------
@@ -229,7 +229,7 @@ class ValkTraffic(Traffic):
                 wpname += "".ljust(24)  # Fill out with spaces
             
             # modify color of route
-            rgb = palette.route
+            rgb = actdata.custacclr.get(data.acid, palette.route)
             rgb_array = np.array([*rgb, 255], dtype=np.uint8)
             color = np.ones((min(nsegments*2, ROUTE_SIZE), 4), dtype=np.uint8)*rgb_array
 
@@ -248,7 +248,6 @@ class ValkTraffic(Traffic):
         ''' Update GPU buffers with new aircraft simulation data. '''
         if not self.initialized:
             return
-
         self.glsurface.makeCurrent()
         actdata = bs.net.get_nodedata()
         if actdata.filteralt:
