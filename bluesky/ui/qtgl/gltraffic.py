@@ -213,27 +213,28 @@ class Traffic(glh.RenderObject, layer=100):
             self.route.update(vertex=routedata)
             wpname = ''
             for wp, alt, spd in zip(data.wpname, data.wpalt, data.wpspd):
-                if alt < 0. and spd < 0.:
-                    txt = wp[:12].ljust(24)  # No second line
-                else:
-                    txt = wp[:12].ljust(12)  # Two lines
-                    if alt < 0:
-                        txt += "-----/"
-                    elif alt > actdata.translvl:
-                        FL = int(round((alt / (100. * ft))))
-                        txt += "FL%03d/" % FL
-                    else:
-                        txt += "%05d/" % int(round(alt / ft))
 
-                    # Speed
-                    if spd < 0:
-                        txt += "--- "
-                    else:
-                        txt += "%03d" % int(round(spd / kts))
-                    # else:
-                    #     txt += "M{:.2f}".format(spd)  # Mach number
+                # if alt < 0. and spd < 0.:
+                #     txt = wp[:12].ljust(24)  # No second line
+                # else:
+                #     txt = wp[:12].ljust(12)  # Two lines
+                #     if alt < 0:
+                #         txt += "-----/"
+                #     elif alt > actdata.translvl:
+                #         FL = int(round((alt / (100. * ft))))
+                #         txt += "FL%03d/" % FL
+                #     else:
+                #         txt += "%05d/" % int(round(alt / ft))
 
-                wpname += txt.ljust(24)  # Fill out with spaces
+                #     # Speed
+                #     if spd < 0:
+                #         txt += "--- "
+                #     else:
+                #         txt += "%03d" % int(round(spd / kts))
+                # wpname += txt.ljust(24)  # Fill out with spaces
+                
+                wpname += "".ljust(24)  # Fill out with spaces
+
             self.routelbl.update(texdepth=np.array(wpname.encode('ascii', 'ignore')),
                                  lat=np.array(data.wplat, dtype=np.float32),
                                  lon=np.array(data.wplon, dtype=np.float32))
