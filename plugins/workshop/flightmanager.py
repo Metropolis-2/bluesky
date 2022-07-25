@@ -19,29 +19,49 @@ def init_plugin():
 
     config = {
         'plugin_name': 'FLIGHTMANAGER',
-        'plugin_type': 'sim'
+        'plugin_type': 'sim',
     }
     return config
 
 class FlightManager(Entity):
     def __init__(self):
         super().__init__()
+
+        self.hold_sim = False
         
         with self.settrafarrays():
             self.virtual_ac = np.array([], dtype=bool)
             self.pprz_ids = np.array([], dtype=str)
+
+            self.gs = np.array([], dtype=np.float32)
+            self.vs = np.array([], dtype=np.float32)
         
     def create(self, n=1):
         super().create(n)
         self.virtual_ac[-n:] = True
         self.pprz_ids[-n:] = ''
+
+        self.gs[-n:] = 0.0
+        self.vs[-n:] = 0.0
             
     def convert_to_virtual(self, acidx):
         self.virtual_ac[acidx] = True
         self.pprz_ids[acidx] = ''
-        stack.stack(f'{bs.traf.id[acidx]} LNAV ON')
+        stack.stack(f'LNAV {bs.traf.id[acidx]} ON')
+        stack.stack(f'VNAV {bs.traf.id[acidx]} ON')
         return
     
+    @timed_function(dt=0.05)
+    def check_hold(self):
+        # check if we are in the hold state
+        if self.hold_sim:
+            
+            # now check if speeds of aircraft are less than 0.1 m/s
+            if np.all(bs.traf.gs < 0.1) and np.all(bs.traf.vs < 0.1):
+                # if so, then we can hold the simulation
+                bs.sim.hold()
+                self.hold_sim = False
+
     @timed_function(dt=1.0)
     def check_connections(self):
         now = datetime.now()
@@ -132,7 +152,7 @@ class FlightManager(Entity):
         '''Takeoff all real aircraft'''
         for acidx, acid in enumerate(bs.traf.id):
 
-          # if real aircraft send command
+            # if real aircraft send command
             if not self.virtual_ac[acidx]:
                 self.send_command(acid, "TakeOff")
             else:
@@ -156,14 +176,22 @@ class FlightManager(Entity):
     def holdall(self):
         '''Hold all aircraft'''
         for acidx, acid in enumerate(bs.traf.id):
+            
+            # get some values to remember speeds
+            self.gs[acidx] = bs.traf.gs[acidx]
+            self.vs[acidx] = bs.traf.vs[acidx]
 
             # if real aircraft send command
             if not self.virtual_ac[acidx]:
                 self.send_command(acid, "Hold")
             else:
-                # TODO: virtual aircraft hold
-                ...
-    
+                # give all aircraft a speed of 0
+                stack.stack(f'SPD {acid} 0')
+                stack.stack(f'VS {acid} 0')
+        
+        # enable check that stops simulation if all aircraft have held
+        self.hold_sim = True
+
     @stack.command()
     def continueall(self):
         '''Continue all aircraft'''
@@ -173,8 +201,16 @@ class FlightManager(Entity):
             if not self.virtual_ac[acidx]:
                 self.send_command(acid, "Continue")
             else:
-                # TODO: virtual aircraft continue route
-                ...
+                stack.stack(f'SPD {acid} {self.gs[acidx]}')
+                stack.stack(f'VS {acid} {self.vs[acidx]}')
+
+                # only turn lnav and vnav on if there is a flight plan 
+                if bs.traf.ap.route[acidx].nwp:
+                    stack.stack(f'LNAV {bs.traf.id[acidx]} ON')
+                    stack.stack(f'VNAV {bs.traf.id[acidx]} ON')
+
+        # continue simulation
+        bs.sim.op()
 
     @stack.command()
     def landall(self):
