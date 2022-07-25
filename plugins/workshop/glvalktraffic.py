@@ -34,7 +34,7 @@ def init_plugin():
 MAX_NAIRCRAFT = 10000
 MAX_NCONFLICTS = 25000
 MAX_ROUTE_LENGTH = 500
-ROUTE_SIZE = 500
+ROUTE_SIZE = 5000
 TRAILS_SIZE = 1000000
 
 
@@ -79,7 +79,7 @@ class ValkTraffic(Traffic):
         self.alt.create(MAX_NAIRCRAFT * 4, glh.GLBuffer.StreamDraw)
         self.tas.create(MAX_NAIRCRAFT * 4, glh.GLBuffer.StreamDraw)
         self.color.create(MAX_NAIRCRAFT * 4, glh.GLBuffer.StreamDraw)
-        self.route_color.create(ROUTE_SIZE * 4, glh.GLBuffer.StreamDraw)
+        self.route_color.create(MAX_NAIRCRAFT * 4, glh.GLBuffer.StreamDraw)
         self.lbl.create(MAX_NAIRCRAFT * 24, glh.GLBuffer.StreamDraw)
         self.asasn.create(MAX_NAIRCRAFT * 24, glh.GLBuffer.StreamDraw)
         self.asase.create(MAX_NAIRCRAFT * 24, glh.GLBuffer.StreamDraw)
@@ -112,7 +112,7 @@ class ValkTraffic(Traffic):
         self.cpalines.create(vertex=MAX_NCONFLICTS * 16, color=palette.conflict, usage=glh.GLBuffer.StreamDraw)
 
         # ------- Aircraft Route -------------------------
-        self.route.create(vertex=ROUTE_SIZE * 8, color=palette.route, usage=glh.gl.GL_DYNAMIC_DRAW)
+        self.route.create(vertex=ROUTE_SIZE * 8, color=self.route_color , usage=glh.gl.GL_DYNAMIC_DRAW)
 
         self.routelbl.create(ROUTE_SIZE * 24, ROUTE_SIZE * 4, ROUTE_SIZE * 4,
                              palette.route, (wpt_size, 0.5 * wpt_size), instanced=True)
@@ -223,20 +223,23 @@ class ValkTraffic(Traffic):
             routedata[6::4] = data.wplat[1:]
             routedata[7::4] = data.wplon[1:]
 
-            self.route.update(vertex=routedata)
-
             wpname = ''
-            for _ in zip(data.wpname, data.wpalt, data.wpspd):
-
+            for i in range(nsegments):
+                # give blank name to waypoint
                 wpname += "".ljust(24)  # Fill out with spaces
+            
+            # modify color of route
+            rgb = palette.route
+            rgb_array = np.array([*rgb, 255], dtype=np.uint8)
+            color = np.ones((min(nsegments*2, ROUTE_SIZE), 4), dtype=np.uint8)*rgb_array
 
+            self.route_color.update(color)
+            
+            self.route.update(vertex=routedata)
             self.routelbl.update(texdepth=np.array(wpname.encode('ascii', 'ignore')),
                                  lat=np.array(data.wplat, dtype=np.float32),
                                  lon=np.array(data.wplon, dtype=np.float32))
             
-            rgb = palette.route
-            color = tuple(rgb) + (255,)
-            self.route_color.update(color)
         else:
             self.route.set_vertex_count(0)
             self.routelbl.n_instances = 0
