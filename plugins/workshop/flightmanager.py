@@ -7,8 +7,6 @@ from time import sleep
 import bluesky as bs
 from bluesky.core import Entity, timed_function
 from bluesky import stack
-from bluesky.tools.aero import ft
-from bluesky.tools.geo import qdrdist
 
 from plugins.workshop import flightplanmaker as fp
 from plugins.workshop import flighttelemetry as fte
@@ -35,7 +33,7 @@ class FlightManager(Entity):
         
     def create(self, n=1):
         super().create(n)
-        self.virtual_ac[-n:] = False
+        self.virtual_ac[-n:] = True
         self.pprz_ids[-n:] = ''
             
     def convert_to_virtual(self, acidx):
@@ -44,25 +42,34 @@ class FlightManager(Entity):
         stack.stack(f'{bs.traf.id[acidx]} LNAV ON')
         return
     
-    # @timed_function(dt=1.0)
-    # def check_connections(self):
-    #     now = datetime.now()
-    #     # TODO: Only fo this check for real aircraft
-    #     for acidx in range(bs.traf.ntraf):
-    #         time_diff = now - fte.telemetry.last_telemetry_update[acidx]
-    #         # If more than 5 seconds then we convert to virtual aircraft
-    #         if time_diff.total_seconds() > 5:
-    #             self.convert_to_virtual(acidx)
+    @timed_function(dt=1.0)
+    def check_connections(self):
+        now = datetime.now()
+
+        for acidx in range(bs.traf.ntraf):
+
+            # only do this for real aircraft
+            if self.virtual_ac[acidx]:
+                return
+
+            time_diff = now - fte.telemetry.last_telemetry_update[acidx]
+            # If more than 5 seconds then we convert to virtual aircraft
+            if time_diff.total_seconds() > 5:
+                self.convert_to_virtual(acidx)
     
-    def updateflightplan(self):
-        ...
-        # TODO: implement update flight plan
-        # TODO: remember to send an update id if flight plan is updated
-    
-    def checkactiveflightplan(self):
-        ...
-        # TODO: implement check active flight plan.
-        # TODO: ensure that flight plan maker matches telemetry id
+    def checkactiveflightplan(self, acidx, active_fp_32bid):
+        ''' Check if telemetry flight plan is the same as the one we have. '''
+
+        # only check this if we have actually sent a flight plan
+        if not fp.flightplans.fp_active[acidx]:
+            return
+
+        # check the current 32 bit id of the active flight plan,
+        # if it is different from the one we have stored, then we have to push the flight plan
+        # again because it did not sync
+        
+        if not str(fp.flightplans.drone_32bid[acidx]) == str(active_fp_32bid):
+            fp.flightplans.generate_fp_from_WP(acidx)
 
     # aircraft specific commands
     # must give acid to execute

@@ -35,11 +35,11 @@ class FlightTelemetry(Entity):
         self.mqtt_client.run()
     
         with self.settrafarrays():
-            self.last_telemetry_update = []
+            self.last_telemetry_update = np.array([], dtype=object)
                     
     def create(self, n=1):
         super().create(n)
-        # self.last_telemetry_update[-n:] = datetime.now()
+        self.last_telemetry_update[-n:] = datetime.now()
 
     def recv_mqtt(self, payload):
         self.lock.acquire()
@@ -82,8 +82,16 @@ class FlightTelemetry(Entity):
                     h_spd = 0.
                 acidx = bs.traf.id2idx(msg['acid'])
                 bs.traf.move(acidx, lat, lon, alt, hdg, h_spd, -vd)
-                # self.last_telemetry_update[acidx] = datetime.now()
+
+                # check active flight plan statues
+                active_fp_32bid = msg['FPStatus']['ActiveFlightPlan32bId']
+                fm.flightmanager.checkactiveflightplan(acidx, active_fp_32bid)
                 
+                actwpidx = msg['FPStatus']['WpIndex']
+
+                # Check last telemetry update in case it is disconnected
+                self.last_telemetry_update[acidx] = datetime.now()
+
         self.mqtt_msgs = []
         return
 

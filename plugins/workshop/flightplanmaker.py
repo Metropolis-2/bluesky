@@ -33,6 +33,7 @@ class FlightPlanMaker(Entity):
 
         with self.settrafarrays():
             self.drone_32bid = np.array([], dtype=np.int32)
+            self.fp_active = np.array([], dtype=bool)
 
     def create(self, n=1):
         super().create(n)
@@ -42,8 +43,10 @@ class FlightPlanMaker(Entity):
         # make sure it is not already in use, if not keep generating
         while random_int in self.drone_32bid:
             random_int = random.getrandbits(32)
-
+        
         self.drone_32bid[-n:] = random_int
+
+        self.fp_active[-n:] = False
 
     def generate_fp_from_WP(self, acidx, filename=None):
         ''' Generate a C2C flight plan from waypoints. '''
@@ -77,6 +80,9 @@ class FlightPlanMaker(Entity):
         self.mqtt_client.publish(f'control/flightplanupload/{pprz_id}', json.dumps(flightplan_dict))
         sleep(1)
 
+        # set the flight plan as active
+        self.fp_active[acidx] = True
+        
         # Only save to file if filename is given
         if filename is not None:
             filename += '.json' if filename[-5:] != '.json' else ''    
