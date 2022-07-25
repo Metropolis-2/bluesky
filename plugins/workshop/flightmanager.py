@@ -77,7 +77,7 @@ class FlightManager(Entity):
 
     @stack.command()
     def sendfp(self, acid: 'acid', fp_file: str=None):
-        fp.flightplans.generate_c2c_fp_from_WP(acid, fp_file)
+        fp.flightplans.generate_fp_from_WP(acid, fp_file)
 
     @stack.command()
     def takeoffac(self, acid: str):
@@ -115,7 +115,7 @@ class FlightManager(Entity):
 
           # if real aircraft send command
             if not self.virtual_ac[acidx]:
-                fp.flightplans.generate_c2c_fp_from_WP(acidx)
+                fp.flightplans.generate_fp_from_WP(acidx)
             else:
                 # TODO: virtual aircraft start flying
                 ...
