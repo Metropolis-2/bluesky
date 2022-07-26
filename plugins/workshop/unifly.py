@@ -7,6 +7,7 @@ import json
 import datetime
 from datetime import timedelta
 from time import sleep
+from rich import print
 
 ### Initialization function of plugin.
 def init_plugin():
@@ -145,6 +146,51 @@ class Unifly(Entity):
 
         response = requests.request("POST", url, headers=headers, data=payload)
         
+        sleep(2)
+
+        url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/actionItems"
+
+        payload={}
+
+        response = requests.request("GET", url, headers=headers, data=payload)
+
+        # TODO: response may fail in case list do a type check
+        if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
+            action_uuid = response.json()[0]['uniqueIdentifier']
+
+
+            # now submit permission request
+            url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uuid}/request"
+
+            payload= json.dumps(
+                {'meta': 
+                    {"uniqueIdentifier": action_uuid,
+                    "additionalData":{},
+                    "permissionRemark":{
+                            "message":{
+                                    "message":"THIS IS A GCS TEST",
+                                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00")
+                            }
+                    }
+                    },
+                'attachmentUpdate': {"updates":[]}
+                }
+            , indent=4)
+            files=[
+
+            ]
+            headers = {
+            'Authorization': f'Bearer {self.acces_token_a}',
+            'Content-Type': 'multipart/form-data'
+            }
+
+            # save payload as json with tabs and spaces
+            with open('payload.json', 'w') as f:
+                f.write(payload)
+
+            response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+            print(response.json())
 
 
     
