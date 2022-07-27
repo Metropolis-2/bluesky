@@ -30,8 +30,11 @@ class Unifly(Entity):
             self.opuid = []
             self.airborne = np.array([], dtype=bool)
             self.ga_flight = np.array([], dtype=bool)
+            self.operator_token = np.array([], dtype=str)
         
         # Initial authentication
+        # TODO: implememnt a way to differentiate between operators (A and B)
+        # TODO: update token id's in a smart way
         self.update_authentication()
 
         # Pull UAS list from Unifly
@@ -57,18 +60,25 @@ class Unifly(Entity):
 
         self.ga_flight[-n:] = False
 
+        self.operator_token[-n:] = ''
+
 
     @stack.command()
-    def postuasop(self, acidx : 'acid', alt):
+    def postuasop(self, acidx : 'acid', operator, alt):
 
         print(f'Posting UAS operation for {bs.traf.id[acidx]}')
         print(f'With uuid: {self.uuid[acidx]}')
+
+        print(acidx, operator,alt)
+
+        self.operator_token[acidx] = self.token_ids[operator]
+
         # get route 
         route = bs.traf.ap.route[acidx]
-
+        print(route.wplat)
         # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
-
+        print(coordinates)
         # get datetime.now() anc convert to iso format
         start = datetime.datetime.now()
 
@@ -135,7 +145,7 @@ class Unifly(Entity):
         headers = {
         'Content-Type': 'application/vnd.geo+json',
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
+        'Authorization': f'Bearer {self.operator_token[acidx]}'
         }
         # save payload as json
         with open('A1.json', 'w') as f:
@@ -157,7 +167,7 @@ class Unifly(Entity):
         headers = {
         'Content-Type': 'application/vnd.geo+json',
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
+        'Authorization': f'Bearer {self.operator_token[acidx]}'
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
@@ -195,7 +205,7 @@ class Unifly(Entity):
             # files=[]
 
             # headers = {
-            # 'Authorization': f'Bearer {self.acces_token_a}',
+            # 'Authorization': f'Bearer {self.operator_token[acidx]}',
             # 'Content-Type': 'multipart/form-data'
             # }
 
@@ -214,7 +224,7 @@ class Unifly(Entity):
 
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
-
+    
         # get route 
         route = bs.traf.ap.route[acidx]
 
@@ -235,7 +245,7 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}',
+        'Authorization': f'Bearer {self.operator_token[acidx]}',
         'content-type': 'application/json'
         }
 
@@ -335,7 +345,7 @@ class Unifly(Entity):
             "speed": 5
             })
             headers = {
-            'Authorization': f'Bearer {self.acces_token_a}',
+            'Authorization': f'Bearer {self.operator_token[acidx]}',
             'content-type': 'application/json'
             }
 
@@ -370,7 +380,7 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}',
+        'Authorization': f'Bearer {self.operator_token[acidx]}',
         'content-type': 'application/json'
         }
 
@@ -399,6 +409,8 @@ class Unifly(Entity):
         response_b = requests.request("POST", url, headers=headers, data=payload_b)
 
         self.acces_token_a, self.acces_token_b = response_a.json()['access_token'], response_b.json()['access_token']
+
+        self.token_ids = {'A': self.acces_token_a, 'B': self.acces_token_b}
     
     @timed_function(dt=120)
     # TODO: delete this when smart
@@ -414,10 +426,22 @@ class Unifly(Entity):
         'Authorization': f'Bearer {self.acces_token_a}'
         }
 
-        response = requests.request("GET", url, headers=headers, data=payload)
+        response_a = requests.request("GET", url, headers=headers, data=payload)
         # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
         # make a dictionary with the nickname as key and the uniqueIdentifier as value
-        self.uas_dict = {uas['nickname']: uas['uniqueIdentifier'] for uas in response.json()}
+        uas_dict_a = {uas['nickname']: uas['uniqueIdentifier'] for uas in response_a.json()}
+
+
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {self.acces_token_b}'
+        }
+
+        response_b = requests.request("GET", url, headers=headers, data=payload)
+        uas_dict_b = {uas['nickname']: uas['uniqueIdentifier'] for uas in response_b.json()}
+
+        # join two dictionaries
+        self.uas_dict = {**uas_dict_a, **uas_dict_b}
 
         print(f'Active UAS dict: {self.uas_dict}')
 
@@ -430,10 +454,25 @@ class Unifly(Entity):
         'Authorization': f'Bearer {self.acces_token_a}'
         }
 
-        response = requests.request("GET", url, headers=headers, data=payload)
+        response_a = requests.request("GET", url, headers=headers, data=payload)
         # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
         # make a dictionary with the nickname as key and the uniqueIdentifier as value
-        self.pilot_dicts = response.json()
+        pilot_dict_a = response_a.json()
+
+
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {self.acces_token_b}'
+        }
+
+        response_b = requests.request("GET", url, headers=headers, data=payload)
+        # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
+        # make a dictionary with the nickname as key and the uniqueIdentifier as value
+        pilot_dict_b = response_b.json()
+
+        # join two dictionaries
+        # TODO: build these correctly
+        self.pilot_dict = {}
 
 
 # TODO: make class operator A and B
