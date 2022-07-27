@@ -230,6 +230,125 @@ class Unifly(Entity):
 
         print(response.text)
 
+    def postnewflightplan(self, acidx : 'acid'):
+        pass
+
+    def blueskysendsalert(self, acidx : 'acid'):
+        pass
+
+
+    def postemergency(self, acidx : 'acid'):
+        # TODO: test
+        # get route 
+        route = bs.traf.ap.route[acidx]
+
+        # make list of coordinates with wplat wplon
+        coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+
+        url = "https://portal.eu.unifly.tech/api/tracking"
+
+        payload = json.dumps({
+        "apiKey": "TUD_Kp37f9R",
+        "identification": "78AF18",
+        "callSign": "DOC99",
+        "timestamp":  datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+        "vehicleType": "AIRPLANE",
+        "location": {
+            "longitude": coordinates[0][0],
+            "latitude": coordinates[0][1]
+        },
+        "altitude": {
+            "altitude": 0,
+            "unit": "ft",
+            "reference": "MSL"
+        },
+        "heading": {
+            "trueHeading": 90
+        },
+        "aircraftData": {
+            "groundSpeed": 0
+        }
+        })
+        headers = {
+        'Content-Type': 'application/json'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+
+        print(response.text)
+
+        # triger timed function to send emergency message every second with updated position, hdg, gs, altitude
+
+    @timed_function(dt=1)
+    def postemergency(self):
+
+        # TODO: updated position, hdg, gs, altitude
+
+        # if emergency vehicle use postemergency api, for that one scenario
+        
+        for acidx, acid in enumerate(bs.traf.id):
+
+            opuid = self.opuid[acidx]
+            uuid = self.uuid[acidx]
+            
+            url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/track"
+
+            route = bs.traf.ap.route[acidx]
+
+            # make list of coordinates with wplat wplon
+            coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+
+            payload = json.dumps({
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+            "location": {
+                "longitude": coordinates[0][0],
+                "latitude": coordinates[0][1]
+            },
+            "altitudeMSL": 35,
+            "altitudeAGL": 20,
+            "heading": 90,
+            "speed": 5
+            })
+            headers = {
+            'Authorization': f'Bearer {self.acces_token_a}',
+            'content-type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+    @stack.command()
+    def postlanding(self, acidx : 'acid'):
+
+        # TODO: take off real drones around this time from fligtmanaget
+        # stack.stack('takeoffac', acidx)
+
+        # get route 
+        route = bs.traf.ap.route[acidx]
+
+        # make list of coordinates with wplat wplon
+        coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+        
+        opuid = self.opuid[acidx]
+        uuid = self.uuid[acidx]
+
+        url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/landing"
+
+        payload = json.dumps({
+        "startTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+        "pilotLocation": {
+            "longitude": coordinates[0][0],
+            "latitude": coordinates[0][1]
+        }
+        })
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {self.acces_token_a}'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+
+        print(response.text)
+        pass
     # TODO: make it smart and just call when failing
     # TODO: differentiate between operators (A and B)
     def update_authentication(self):
