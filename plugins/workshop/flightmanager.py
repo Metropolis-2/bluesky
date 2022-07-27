@@ -45,6 +45,7 @@ class FlightManager(Entity):
         self.vs[-n:] = 0.0
             
     def convert_to_virtual(self, acidx):
+        # TODO: go through stack and replace commands with virtual commands
         self.virtual_ac[acidx] = True
         self.pprz_ids[acidx] = ''
         stack.stack(f'LNAV {bs.traf.id[acidx]} ON')

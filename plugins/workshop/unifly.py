@@ -162,37 +162,36 @@ class Unifly(Entity):
             # now submit permission request
             url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uuid}/request"
 
-            payload= json.dumps(
-                {'meta': 
-                    {"uniqueIdentifier": action_uuid,
-                    "additionalData":{},
-                    "permissionRemark":{
-                            "message":{
-                                    "message":"THIS IS A GCS TEST",
-                                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00")
-                            }
-                    }
-                    },
-                'attachmentUpdate': {"updates":[]}
-                }
-            , indent=4)
-            files=[
+            # payload= json.dumps(
+            #     'meta': 
+            #         {"uniqueIdentifier": "{{" + action_uuid + "}}",
+            #         "additionalData":{},
+            #         "permissionRemark":{
+            #                 "message":{
+            #                         "message":"THIS IS A GCS TEST",
+            #                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00")
+            #                 }
+            #         }
+            #         },
+            #     'attachmentUpdate': {"updates":[]}
+            #     )
+            
+            # files=[]
 
-            ]
-            headers = {
-            'Authorization': f'Bearer {self.acces_token_a}',
-            'Content-Type': 'multipart/form-data'
-            }
+            # headers = {
+            # 'Authorization': f'Bearer {self.acces_token_a}',
+            # 'Content-Type': 'multipart/form-data'
+            # }
 
             # save payload as json with tabs and spaces
-            with open('payload.json', 'w') as f:
-                f.write(payload)
+            # with open('payload.json', 'w') as f:
+            #     f.write(json.dumps(payload))
 
-            response = requests.request("POST", url, headers=headers, data=payload, files=files)
+            # print(payload)
 
-            print(response.json())
+            # response = requests.request("POST", url, headers=headers, data=payload, files=files)
 
-
+            # print(response.json())
     
     # TODO: make it smart and just call when failing
     # TODO: differentiate between operators (A and B)
