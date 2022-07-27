@@ -27,6 +27,7 @@ class Unifly(Entity):
 
         with self.settrafarrays():
             self.uuid = []
+            self.opuid = []
         
         # Initial authentication
         self.update_authentication()
@@ -47,6 +48,8 @@ class Unifly(Entity):
         acid = bs.traf.id[-1]
 
         self.uuid[-1] = self.uas_dict.get(acid, 'None')
+
+        self.opuid[-1] = ''
 
     @stack.command()
     def postuasop(self, acidx : 'acid', alt):
@@ -134,6 +137,7 @@ class Unifly(Entity):
         sleep(5)
 
         op_uuid = response.json()['uniqueIdentifier']
+        self.opuid[acidx] = op_uuid
 
         url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/publish"
 
@@ -193,6 +197,39 @@ class Unifly(Entity):
 
             # print(response.json())
     
+    @stack.command()
+    def posttakeoff(self, acidx : 'acid'):
+
+        # TODO: take off real drones around this time from fligtmanaget
+        # stack.stack('takeoffac', acidx)
+
+        # get route 
+        route = bs.traf.ap.route[acidx]
+
+        # make list of coordinates with wplat wplon
+        coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+        
+        opuid = self.opuid[acidx]
+        uuid = self.uuid[acidx]
+
+        url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/takeoff"
+
+        payload = json.dumps({
+        "startTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+        "pilotLocation": {
+            "longitude": coordinates[0][0],
+            "latitude": coordinates[0][1]
+        }
+        })
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {self.acces_token_a}'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+
+        print(response.text)
+
     # TODO: make it smart and just call when failing
     # TODO: differentiate between operators (A and B)
     def update_authentication(self):
