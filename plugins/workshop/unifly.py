@@ -28,6 +28,8 @@ class Unifly(Entity):
         with self.settrafarrays():
             self.uuid = []
             self.opuid = []
+            self.airborne = np.array([], dtype=bool)
+            self.ga_flight = np.array([], dtype=bool)
         
         # Initial authentication
         self.update_authentication()
@@ -51,8 +53,16 @@ class Unifly(Entity):
 
         self.opuid[-1] = ''
 
+        self.airborne[-n:] = False
+
+        self.ga_flight[-n:] = False
+
+
     @stack.command()
     def postuasop(self, acidx : 'acid', alt):
+
+        print(f'Posting UAS operation for {bs.traf.id[acidx]}')
+        print(f'With uuid: {self.uuid[acidx]}')
         # get route 
         route = bs.traf.ap.route[acidx]
 
@@ -139,6 +149,8 @@ class Unifly(Entity):
         op_uuid = response.json()['uniqueIdentifier']
         self.opuid[acidx] = op_uuid
 
+        print(f'UAS operation opid: {op_uuid} for {bs.traf.id[acidx]}')
+
         url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/publish"
 
         payload = ""
@@ -223,12 +235,17 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
+        'Authorization': f'Bearer {self.acces_token_a}',
+        'content-type': 'application/json'
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
 
         print(response.text)
+
+        self.airborne[acidx] = True
+
+        print(f"{bs.traf.id[acidx]} is airborne")
 
     def postnewflightplan(self, acidx : 'acid'):
         pass
@@ -236,11 +253,14 @@ class Unifly(Entity):
     def blueskysendsalert(self, acidx : 'acid'):
         pass
 
-
-    def postemergency(self, acidx : 'acid'):
+    @stack.command()
+    def postgaflight(self, acidx : 'acid'):
         # TODO: test
         # get route 
         route = bs.traf.ap.route[acidx]
+        self.ga_flight[acidx] = True
+
+        # TODO: finish this
 
         # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
@@ -280,11 +300,12 @@ class Unifly(Entity):
         # triger timed function to send emergency message every second with updated position, hdg, gs, altitude
 
     @timed_function(dt=1)
-    def postemergency(self):
+    def posttelemetry(self):
 
         # TODO: updated position, hdg, gs, altitude
+        # TODO : make sure route is available at beginning of scenario
 
-        # if emergency vehicle use postemergency api, for that one scenario
+        # if GA emergency vehicle use postemergency api, for that one scenario
         
         for acidx, acid in enumerate(bs.traf.id):
 
@@ -292,6 +313,10 @@ class Unifly(Entity):
             uuid = self.uuid[acidx]
             
             url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/track"
+
+            # if route is empty continue
+            if bs.traf.ap.route[acidx].wplat == [] or not self.airborne[acidx]:
+                continue
 
             route = bs.traf.ap.route[acidx]
 
@@ -316,6 +341,9 @@ class Unifly(Entity):
 
             response = requests.request("POST", url, headers=headers, data=payload)
 
+            print('Telemetry for ' + acid )
+            print(response.status_code)
+
     @stack.command()
     def postlanding(self, acidx : 'acid'):
 
@@ -334,7 +362,7 @@ class Unifly(Entity):
         url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/landing"
 
         payload = json.dumps({
-        "startTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+        "endTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
         "pilotLocation": {
             "longitude": coordinates[0][0],
             "latitude": coordinates[0][1]
@@ -342,13 +370,19 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
+        'Authorization': f'Bearer {self.acces_token_a}',
+        'content-type': 'application/json'
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
 
         print(response.text)
-        pass
+
+        self.airborne[acidx] = False
+        
+        print(f"{bs.traf.id[acidx]} has landed")
+
+
     # TODO: make it smart and just call when failing
     # TODO: differentiate between operators (A and B)
     def update_authentication(self):
@@ -384,6 +418,8 @@ class Unifly(Entity):
         # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
         # make a dictionary with the nickname as key and the uniqueIdentifier as value
         self.uas_dict = {uas['nickname']: uas['uniqueIdentifier'] for uas in response.json()}
+
+        print(f'Active UAS dict: {self.uas_dict}')
 
     def get_pilot_dicts(self):
         url = "https://portal.eu.unifly.tech/api/uasoperations/users"
