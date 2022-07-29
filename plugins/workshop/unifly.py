@@ -6,6 +6,8 @@ import datetime
 from datetime import timedelta
 from time import sleep
 from rich import print
+from rich.console import Console
+console = Console()
 
 import bluesky as bs
 from bluesky.core import Entity, timed_function
@@ -133,14 +135,10 @@ class Unifly(Entity):
             username = self.operators_dict[key]['username']
             password = self.operators_dict[key]['password']
             
-            payload = rf'username={username}&password={password}&grant_type=password'
-            # make the request
+            # prep payload, make request and get token and save
+            payload = f'username={username}&password={password}&grant_type=password'
             response = requests.request("POST", url, headers=headers, data=payload)
-
-            # get the token
             token = response.json()['access_token']
-
-            # save the token
             self.token_ids[key] = token
     
     def get_uas_dict(self):
@@ -152,22 +150,14 @@ class Unifly(Entity):
         # loop through token_ids to get their uas
         for key in self.token_ids:
 
-            # get the token
+            # get saved token, make request, get uas dict and save
             token = self.token_ids[key]
-
-            # headers
             headers = {
                         'Accept': 'application/json',
                         'Authorization': f'Bearer {token}'
                         }
-
-            # make the request
             response = requests.request("GET", url, headers=headers)
-
-            # get the uas
             user_uas_dict = {uas['nickname']: uas['uniqueIdentifier'] for uas in response.json()}
-
-            # get all keys and values and extend self.uas_dict
             self.uas_dict.update(user_uas_dict)
 
         print('[blue]Active UASes:')
@@ -187,19 +177,13 @@ class Unifly(Entity):
         # loop through token_ids to get thee pilots
         for key in self.token_ids:
                 
-            # get the token
+            # get the saved token, make request, get pilots dict and save
             token = self.token_ids[key]
-
-            # headers
             headers = {
                         'Accept': 'application/json',
                         'Authorization': f'Bearer {token}'
                         }
-
-            # make the request
             response = requests.request("GET", url, headers=headers, data=payload)
-
-            # get the pilots of this user
             self.pilots_dict[key] = response.json()
 
         print('[blue]Active pilots:')
@@ -212,8 +196,18 @@ class Unifly(Entity):
 
     @stack.command()
     def postuasop(self, acidx : 'acid', operator, alt):
+        '''
+        Post a UAS to an operator.
 
-        print(f'[blue]Posting Draft UAS operation for acid: [green]{bs.traf.id[acidx]}[/] with uuid: [blue]{self.uuid[acidx]}')
+        Requires three request POSTS:
+        1. POST draft operation
+        2. POST publish operation
+        3. POST check for any action items
+        4. If action items permissions, POST permission
+        
+        '''
+
+        print(f'[blue]Posting draft operation for acid: [green]{bs.traf.id[acidx]}[/] with uuid: [green]{self.uuid[acidx]}')
 
         # The first step is to get the operator token and assign an operator to each aircraft
         self.operator[acidx] = operator
@@ -289,50 +283,67 @@ class Unifly(Entity):
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
-        op_uuid = response.json()['uniqueIdentifier']
-        self.opuid[acidx] = op_uuid
 
         if response.status_code == 200:
-            print(f'[blue]Successfullt posted this operation with operation id: [green]{op_uuid}')
-
+            op_uuid = response.json()['uniqueIdentifier']
+            self.opuid[acidx] = op_uuid
+            print(f'[blue]Successfully posted draft operation for acid [green]{bs.traf.id[acidx]}[/] with operation id: [green]{op_uuid}')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post draft operation for acid [green]{bs.traf.id[acidx]}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+            return
         # sleep for 5 seconds before Publishing the draft operation
         sleep(5)
 
+        # The second step is to publish the draft operation
         print(f'[blue]Publishing UAS operation with opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
 
+        # Prepare the message for publishing
         url = f"{self.base_url}/api/uasoperations/{op_uuid}/publish"
-
         payload = ""
         headers = {
         'Content-Type': 'application/vnd.geo+json',
         'Accept': 'application/json',
         'Authorization': f'Bearer {operator_token}'
         }
-
         response = requests.request("POST", url, headers=headers, data=payload)
         
+        if response.status_code == 200:
+            print(f'[blue]Successfully published this operation with operation id: [green]{op_uuid}')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to publish this operation with operation id: [green]{op_uuid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+
+        # sleep two seconds before requesting action items
         sleep(2)
 
-        url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/actionItems"
+        # The third step is to request action items
+        print(f'[blue]Requesting action items for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
 
+        # Prepare the message for asking for action items
+        url = f"{self.base_url}/api/uasoperations/{op_uuid}/actionItems"
         payload={}
-
         response = requests.request("GET", url, headers=headers, data=payload)
 
-        print('-----permission requests-------')
-        # TODO: response may fail in case list do a type check
+        # Check if you need to ask for permission
         if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
-            action_uuid = response.json()[0]['uniqueIdentifier']
+            
+            print(f'[blue]Requesting permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
 
+            # get the action unique id
+            action_uid = response.json()[0]['uniqueIdentifier']
 
-            # now submit permission request
-            url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uuid}/request"
-
+            # Prepare the permission request
+            url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uid}/request"
             now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
-            print(now)
-
             payload_key_meta = {
-            'uniqueIdentifier': '{{'+action_uuid+'}}',
+            'uniqueIdentifier': '{{'+action_uid+'}}',
             'additionalData': {},
             'permissionRemark': {
                 'message': {
@@ -357,26 +368,39 @@ class Unifly(Entity):
             'Authorization': f'Bearer {operator_token}',
             'Content-type': f'multipart/form-data; boundary={boundary}'
             }
-            response = requests.request("POST", url, headers=headers, data=payload, files=files)        
-    
+            response = requests.request("POST", url, headers=headers, data=payload, files=files)       
+
+            if response.status_code == 201:
+                print(f'[blue]Successfully requested permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}') 
+            else:
+                console.rule(style='red')
+                print(f'[red]Failed to request permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+                print(f'[red]Status Code: [cyan]{response.status_code}')
+                print(response.json())
+                console.rule(style='red')
+
+
     @stack.command()
     def posttakeoff(self, acidx : 'acid'):
+        '''
+        Post takeoff for a UAS.
+        '''
 
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
-        operator_token = self.token_ids[self.operator[acidx]]
         
-        # get route 
+        # get coordinates of route
         route = bs.traf.ap.route[acidx]
-
-        # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
         
+        # Get all tokens and ids
+        operator_token = self.token_ids[self.operator[acidx]]
         opuid = self.opuid[acidx]
         uuid = self.uuid[acidx]
 
-        url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/takeoff"
+        url = f"{self.base_url}/api/uasoperations/{opuid}/uases/{uuid}/takeoff"
 
+        # prepare the message
         payload = json.dumps({
         "startTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
         "pilotLocation": {
@@ -392,11 +416,19 @@ class Unifly(Entity):
 
         response = requests.request("POST", url, headers=headers, data=payload)
 
-        print(response.text)
+        if response.status_code == 200:
+            print(f'[blue]Successfully posted takeoff for acid [green]{bs.traf.id[acidx]}[/]')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post takeoff for acid [green]{bs.traf.id[acidx]}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+            return
 
         self.airborne[acidx] = True
 
-        print(f"{bs.traf.id[acidx]} is airborne")
+        print(f"[green]{bs.traf.id[acidx]} [blue]is airborne")
 
     def postnewflightplan(self, acidx : 'acid'):
         pass
@@ -446,7 +478,7 @@ class Unifly(Entity):
 
         response = requests.request("POST", url, headers=headers, data=payload)
 
-        print(response.text)
+        print(response.json())
 
         # triger timed function to send emergency message every second with updated position, hdg, gs, altitude
 
@@ -494,31 +526,40 @@ class Unifly(Entity):
 
             response = requests.request("POST", url, headers=headers, data=payload)
 
-            print('Telemetry for ' + acid )
-            print(response.status_code)
+            if response.status_code == 200:
+                print(f'[blue]Posting telemetry for acid [green]{acid}[/]')
+            else:
+                console.rule(style='red')
+                print(f'[red]Failed to post telemetry for acid [green]{acid}')
+                print(f'[red]Status Code: [cyan]{response.status_code}')
+                print(response.json())
+                console.rule(style='red')
+
 
     @stack.command()
     def postlanding(self, acidx : 'acid'):
-
+        '''
+        Post landing for a UAS.
+        '''
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
-        operator_token = self.token_ids[self.operator[acidx]]
-        # get route 
+        
+        # get coordinates of landing
         route = bs.traf.ap.route[acidx]
-
-        # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
         
+        # get tokens and ids
+        operator_token = self.token_ids[self.operator[acidx]]
         opuid = self.opuid[acidx]
         uuid = self.uuid[acidx]
 
+        # prepare message
         url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/landing"
-
         payload = json.dumps({
         "endTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
         "pilotLocation": {
-            "longitude": coordinates[0][0],
-            "latitude": coordinates[0][1]
+            "longitude": coordinates[-1][0],
+            "latitude": coordinates[-1][1]
         }
         })
         headers = {
@@ -526,11 +567,18 @@ class Unifly(Entity):
         'Authorization': f'Bearer {operator_token}',
         'content-type': 'application/json'
         }
-
         response = requests.request("POST", url, headers=headers, data=payload)
 
-        print(response.text)
+        if response.status_code == 200:
+            print(f'[blue]Successfully posted landing for acid [green]{bs.traf.id[acidx]}[/]')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post landing for acid [green]{bs.traf.id[acidx]}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+            return
 
         self.airborne[acidx] = False
         
-        print(f"{bs.traf.id[acidx]} has landed")
+
