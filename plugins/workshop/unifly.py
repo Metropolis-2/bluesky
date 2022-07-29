@@ -1,7 +1,4 @@
-import bluesky as bs
 import numpy as np
-from bluesky.core import Entity, timed_function
-from bluesky import stack
 import requests
 import json
 import codecs
@@ -9,6 +6,39 @@ import datetime
 from datetime import timedelta
 from time import sleep
 from rich import print
+
+import bluesky as bs
+from bluesky.core import Entity, timed_function
+from bluesky import stack, settings
+
+
+settings.set_variable_defaults(
+    unifly_base_url="https://portal.eu.unifly.tech",
+    active_operators = ['TA', 'TB'],
+    operators_dict = {
+        'TA': {
+                'username'      : 't.lundby+mptesta@unifly.aero',
+                'password'      : 'MP2Demo',
+                'description'   : 'Test Operator A',
+        },
+        'TB': {
+                'username'      : 't.lundby+mptestb@unifly.aero',
+                'password'      : 'MP2Demo',
+                'description'   : 'Test Operator B',
+        },
+        'DA': {
+                'username'      : 't.lundby+mpdemoa@unifly.aero',
+                'password'      : 'MP2Demo',
+                'description'   : 'Demonstration Operator A',
+        },
+        'DB': {
+                'username'      : 't.lundby+mpdemob@unifly.aero',
+                'password'      : 'MP2Demo',
+                'description'   : 'Demonstration Operator B',
+        },
+    }
+)
+
 
 ### Initialization function of plugin.
 def init_plugin():
@@ -27,22 +57,36 @@ class Unifly(Entity):
         super().__init__()
 
         with self.settrafarrays():
-            self.uuid = []
-            self.opuid = []
-            self.airborne = np.array([], dtype=bool)
+            self.uuid      = np.array([], dtype=object)
+            self.opuid     = np.array([], dtype=object)
+            self.airborne  = np.array([], dtype=bool)
             self.ga_flight = np.array([], dtype=bool)
-            self.operator = np.array([], dtype=str)
+            self.operator  = np.array([], dtype=str)
         
+        # get defaults from settings
+        self.base_url = settings.unifly_base_url
+        self.active_operators  = settings.active_operators
+        self.operators_dict = {k: v for k, v in settings.operators_dict.items() if k in self.active_operators}
+        
+        # go through values and modify 'username' so that '+' and '@' are replaced with %2B and %40
+        for key, value in self.operators_dict.items():
+            self.operators_dict[key]['username'] = value['username'].replace('+', '%2B')
+            self.operators_dict[key]['username'] = value['username'].replace('@', '%40')
+        
+        print('[blue]Active Operators:')
+        print(self.active_operators)
         # Initial authentication
-        # TODO: implememnt a way to differentiate between operators (A and B)
         # TODO: update token id's in a smart way
+        self.token_ids = {}
         self.update_authentication()
 
         # Pull UAS list from Unifly
+        self.uas_dict = {}
         self.get_uas_dict()
 
         # get the pilots from Unifly
-        self.get_pilot_dicts()
+        self.pilots_dict = {}
+        self.get_pilots_dict()
 
         # save priorities
         self.priority_levels = ['PRIORITY_GROUP_DEFAULT', 'PRIORITY_GROUP_PRIORITY']
@@ -53,9 +97,9 @@ class Unifly(Entity):
         # look through uas_dict for the uuid
         acid = bs.traf.id[-1]
 
-        self.uuid[-1] = self.uas_dict.get(acid, 'None')
+        self.uuid[-n:] = self.uas_dict.get(acid, 'None')
 
-        self.opuid[-1] = ''
+        self.opuid[-n:] = ''
 
         self.airborne[-n:] = False
 
@@ -63,6 +107,108 @@ class Unifly(Entity):
 
         self.operator[-n:] = ''
 
+    # TODO: make it smart and just call when failing
+    # TODO: differentiate between operators (A and B)
+    def update_authentication(self):
+        '''
+        Update the authentication tokens for the operators
+
+        Below is a payload example
+        payload = 'username=t.lundby%2Bmptesta%40unifly.aero&password=MP2Demo&grant_type=password'
+        
+        '''
+
+        # get the url and headers
+        url = f"{self.base_url}/auth/realms/OperatorPortal/protocol/openid-connect/token"
+        headers = {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                        'Authorization': 'Basic YWlyZW5hV2ViUG9ydGFsOg=='
+                        }
+
+        # loop through keys of self.users_dict to get authentication tocken
+        for key in self.operators_dict:
+
+            # get the username and password
+            username = self.operators_dict[key]['username']
+            password = self.operators_dict[key]['password']
+            
+            payload = rf'username={username}&password={password}&grant_type=password'
+            # make the request
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            # get the token
+            token = response.json()['access_token']
+
+            # save the token
+            self.token_ids[key] = token
+    
+    @timed_function(dt=120)
+    # TODO: delete this when smart
+    def update_authentication_timed(self):
+        self.update_authentication()
+
+    def get_uas_dict(self):
+        ''' Get a dictionary of all uas registered to ussers'''
+
+        # get the url and headers
+        url = f"{self.base_url}/api/uases"
+
+        # loop through token_ids to get their uas
+        for key in self.token_ids:
+
+            # get the token
+            token = self.token_ids[key]
+
+            # headers
+            headers = {
+                        'Accept': 'application/json',
+                        'Authorization': f'Bearer {token}'
+                        }
+
+            # make the request
+            response = requests.request("GET", url, headers=headers)
+
+            # get the uas
+            user_uas_dict = {uas['nickname']: uas['uniqueIdentifier'] for uas in response.json()}
+
+            # get all keys and values and extend self.uas_dict
+            self.uas_dict.update(user_uas_dict)
+
+        print('[blue]Active UASes:')
+        print(self.uas_dict)
+
+    def get_pilots_dict(self):
+        '''
+        Get a dictionary of all pilots from all operators. 
+        The key is the operator and the value is a list of pilots.
+        '''
+
+        # get the url and empty payload
+        url = f"{self.base_url}/api/uasoperations/users"
+
+        payload = {}
+
+        # loop through token_ids to get thee pilots
+        for key in self.token_ids:
+                
+            # get the token
+            token = self.token_ids[key]
+
+            # headers
+            headers = {
+                        'Accept': 'application/json',
+                        'Authorization': f'Bearer {token}'
+                        }
+
+            # make the request
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            # get the pilots of this user
+            self.pilots_dict[key] = response.json()
+
+        print('[blue]Active pilots:')
+        print(self.pilots_dict)
 
     @stack.command()
     def postuasop(self, acidx : 'acid', operator, alt):
@@ -395,110 +541,3 @@ class Unifly(Entity):
         self.airborne[acidx] = False
         
         print(f"{bs.traf.id[acidx]} has landed")
-
-
-    # TODO: make it smart and just call when failing
-    # TODO: differentiate between operators (A and B)
-    def update_authentication(self):
-        url = "https://portal.eu.unifly.tech/auth/realms/OperatorPortal/protocol/openid-connect/token"
-        payload_a = 'username=t.lundby%2Bmptesta%40unifly.aero&password=MP2Demo&grant_type=password'
-        headers = {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'application/json',
-                        'Authorization': 'Basic YWlyZW5hV2ViUG9ydGFsOg=='
-                        }
-        response_a = requests.request("POST", url, headers=headers, data=payload_a)
-
-        payload_b = 'username=t.lundby%2Bmptestb%40unifly.aero&password=MP2Demo&grant_type=password'
-        response_b = requests.request("POST", url, headers=headers, data=payload_b)
-
-        self.acces_token_a, self.acces_token_b = response_a.json()['access_token'], response_b.json()['access_token']
-
-        self.token_ids = {'A': self.acces_token_a, 'B': self.acces_token_b}
-    
-    @timed_function(dt=120)
-    # TODO: delete this when smart
-    def update_authentication_timed(self):
-        self.update_authentication()
-
-    def get_uas_dict(self):
-        url = "https://portal.eu.unifly.tech/api/uases"
-
-        payload={}
-        headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
-        }
-
-        response_a = requests.request("GET", url, headers=headers, data=payload)
-        # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
-        # make a dictionary with the nickname as key and the uniqueIdentifier as value
-        uas_dict_a = {uas['nickname']: uas['uniqueIdentifier'] for uas in response_a.json()}
-
-
-        headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_b}'
-        }
-
-        response_b = requests.request("GET", url, headers=headers, data=payload)
-        uas_dict_b = {uas['nickname']: uas['uniqueIdentifier'] for uas in response_b.json()}
-
-        # join two dictionaries
-        self.uas_dict = {**uas_dict_a, **uas_dict_b}
-
-        print(f'Active UAS dict: {self.uas_dict}')
-
-    def get_pilot_dicts(self):
-        url = "https://portal.eu.unifly.tech/api/uasoperations/users"
-
-        payload={}
-        headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_a}'
-        }
-
-        response_a = requests.request("GET", url, headers=headers, data=payload)
-        # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
-        # make a dictionary with the nickname as key and the uniqueIdentifier as value
-        pilot_dict_a = response_a.json()
-
-
-        headers = {
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {self.acces_token_b}'
-        }
-
-        response_b = requests.request("GET", url, headers=headers, data=payload)
-        # response comes as a list of json objects. We need to extract the nickname and the uniqueIdentifier.
-        # make a dictionary with the nickname as key and the uniqueIdentifier as value
-        pilot_dict_b = response_b.json()
-
-        # join two dictionaries
-        # TODO: build these correctly
-        self.pilot_dict = {}
-
-
-# TODO: make class operator A and B
-# class Operator:
-#     def __init__(self, id) -> None:
-
-#         self.id = id
-
-#         self.access_token = ''
-
-
-#     def update_authentication(self):
-#         url = "https://portal.eu.unifly.tech/auth/realms/OperatorPortal/protocol/openid-connect/token"
-#         payload_a = 'username=t.lundby%2Bmptesta%40unifly.aero&password=MP2Demo&grant_type=password'
-#         headers = {
-#                         'Content-Type': 'application/x-www-form-urlencoded',
-#                         'Accept': 'application/json',
-#                         'Authorization': 'Basic YWlyZW5hV2ViUG9ydGFsOg=='
-#                         }
-#         response_a = requests.request("POST", url, headers=headers, data=payload_a)
-
-#         payload_b = 'username=t.lundby%2Bmptestb%40unifly.aero&password=MP2Demo&grant_type=password'
-#         response_b = requests.request("POST", url, headers=headers, data=payload_b)
-
-#         self.acces_token_a, self.acces_token_b = response_a['access_token'], response_b['access_token']
