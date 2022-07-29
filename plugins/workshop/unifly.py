@@ -143,11 +143,6 @@ class Unifly(Entity):
             # save the token
             self.token_ids[key] = token
     
-    @timed_function(dt=120)
-    # TODO: delete this when smart
-    def update_authentication_timed(self):
-        self.update_authentication()
-
     def get_uas_dict(self):
         ''' Get a dictionary of all uas registered to ussers'''
 
@@ -210,28 +205,28 @@ class Unifly(Entity):
         print('[blue]Active pilots:')
         print(self.pilots_dict)
 
+    @timed_function(dt=120)
+    # TODO: delete this when smart
+    def update_authentication_timed(self):
+        self.update_authentication()
+
     @stack.command()
     def postuasop(self, acidx : 'acid', operator, alt):
 
-        print(f'Posting UAS operation for {bs.traf.id[acidx]}')
-        print(f'With uuid: {self.uuid[acidx]}')
+        print(f'[blue]Posting Draft UAS operation for acid: [green]{bs.traf.id[acidx]}[/] with uuid: [blue]{self.uuid[acidx]}')
 
+        # The first step is to get the operator token and assign an operator to each aircraft
         self.operator[acidx] = operator
         operator_token = self.token_ids[self.operator[acidx]]
 
-        # get route 
+        # For a draft route we need the coordinates of the route, start time and end time (+10 mins)
         route = bs.traf.ap.route[acidx]
-
-        # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
-
-        # get datetime.now() anc convert to iso format
         start = datetime.datetime.now()
-
-        # add 10 minutes to now
         end = start + timedelta(minutes=10)
-
-        url = "https://portal.eu.unifly.tech/api/uasoperations/draft"
+        
+        # prepare message for operation
+        url = f"{self.base_url}/api/uasoperations/draft"
 
         payload = json.dumps({
         "type": "Feature",
@@ -293,21 +288,19 @@ class Unifly(Entity):
         'Authorization': f'Bearer {operator_token}'
         }
 
-        # save payload as json
-        with open('A1.json', 'w') as f:
-            f.write(payload)
-
-
         response = requests.request("POST", url, headers=headers, data=payload)
-
-        sleep(5)
-        
         op_uuid = response.json()['uniqueIdentifier']
         self.opuid[acidx] = op_uuid
 
-        print(f'UAS operation opid: {op_uuid} for {bs.traf.id[acidx]}')
+        if response.status_code == 200:
+            print(f'[blue]Successfullt posted this operation with operation id: [green]{op_uuid}')
 
-        url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/publish"
+        # sleep for 5 seconds before Publishing the draft operation
+        sleep(5)
+
+        print(f'[blue]Publishing UAS operation with opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+
+        url = f"{self.base_url}/api/uasoperations/{op_uuid}/publish"
 
         payload = ""
         headers = {
