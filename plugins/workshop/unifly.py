@@ -4,6 +4,7 @@ from bluesky.core import Entity, timed_function
 from bluesky import stack
 import requests
 import json
+import codecs
 import datetime
 from datetime import timedelta
 from time import sleep
@@ -30,7 +31,7 @@ class Unifly(Entity):
             self.opuid = []
             self.airborne = np.array([], dtype=bool)
             self.ga_flight = np.array([], dtype=bool)
-            self.operator_token = np.array([], dtype=str)
+            self.operator = np.array([], dtype=str)
         
         # Initial authentication
         # TODO: implememnt a way to differentiate between operators (A and B)
@@ -60,7 +61,7 @@ class Unifly(Entity):
 
         self.ga_flight[-n:] = False
 
-        self.operator_token[-n:] = ''
+        self.operator[-n:] = ''
 
 
     @stack.command()
@@ -69,16 +70,15 @@ class Unifly(Entity):
         print(f'Posting UAS operation for {bs.traf.id[acidx]}')
         print(f'With uuid: {self.uuid[acidx]}')
 
-        print(acidx, operator,alt)
-
-        self.operator_token[acidx] = self.token_ids[operator]
+        self.operator[acidx] = operator
+        operator_token = self.token_ids[self.operator[acidx]]
 
         # get route 
         route = bs.traf.ap.route[acidx]
-        print(route.wplat)
+
         # make list of coordinates with wplat wplon
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
-        print(coordinates)
+
         # get datetime.now() anc convert to iso format
         start = datetime.datetime.now()
 
@@ -86,7 +86,6 @@ class Unifly(Entity):
         end = start + timedelta(minutes=10)
 
         url = "https://portal.eu.unifly.tech/api/uasoperations/draft"
-
 
         payload = json.dumps({
         "type": "Feature",
@@ -145,8 +144,9 @@ class Unifly(Entity):
         headers = {
         'Content-Type': 'application/vnd.geo+json',
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.operator_token[acidx]}'
+        'Authorization': f'Bearer {operator_token}'
         }
+
         # save payload as json
         with open('A1.json', 'w') as f:
             f.write(payload)
@@ -155,7 +155,7 @@ class Unifly(Entity):
         response = requests.request("POST", url, headers=headers, data=payload)
 
         sleep(5)
-
+        
         op_uuid = response.json()['uniqueIdentifier']
         self.opuid[acidx] = op_uuid
 
@@ -167,7 +167,7 @@ class Unifly(Entity):
         headers = {
         'Content-Type': 'application/vnd.geo+json',
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.operator_token[acidx]}'
+        'Authorization': f'Bearer {operator_token}'
         }
 
         response = requests.request("POST", url, headers=headers, data=payload)
@@ -180,6 +180,7 @@ class Unifly(Entity):
 
         response = requests.request("GET", url, headers=headers, data=payload)
 
+        print('-----permission requests-------')
         # TODO: response may fail in case list do a type check
         if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
             action_uuid = response.json()[0]['uniqueIdentifier']
@@ -188,43 +189,44 @@ class Unifly(Entity):
             # now submit permission request
             url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uuid}/request"
 
-            # payload= json.dumps(
-            #     'meta': 
-            #         {"uniqueIdentifier": "{{" + action_uuid + "}}",
-            #         "additionalData":{},
-            #         "permissionRemark":{
-            #                 "message":{
-            #                         "message":"THIS IS A GCS TEST",
-            #                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00")
-            #                 }
-            #         }
-            #         },
-            #     'attachmentUpdate': {"updates":[]}
-            #     )
-            
-            # files=[]
+            now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+            print(now)
 
-            # headers = {
-            # 'Authorization': f'Bearer {self.operator_token[acidx]}',
-            # 'Content-Type': 'multipart/form-data'
-            # }
+            payload_key_meta = {
+            'uniqueIdentifier': '{{'+action_uuid+'}}',
+            'additionalData': {},
+            'permissionRemark': {
+                'message': {
+                'message': 'test',
+                'timestamp': now
+                }
+            }
+            }
+            files = []
+            boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
+            dataList = []
+            dataList.append(codecs.encode(f'--{boundary}'))
+            dataList.append(codecs.encode('Content-Disposition: form-data; name=meta;'))
+            dataList.append(codecs.encode('Content-Type: {}'.format('application/json')))
+            dataList.append(codecs.encode(''))
+            dataList.append(codecs.encode(json.dumps(payload_key_meta)))
+            dataList.append(codecs.encode(f'--{boundary}--'))
+            dataList.append(codecs.encode(''))
+            payload = b'\r\n'.join(dataList)
 
-            # save payload as json with tabs and spaces
-            # with open('payload.json', 'w') as f:
-            #     f.write(json.dumps(payload))
-
-            # print(payload)
-
-            # response = requests.request("POST", url, headers=headers, data=payload, files=files)
-
-            # print(response.json())
+            headers = {
+            'Authorization': f'Bearer {operator_token}',
+            'Content-type': f'multipart/form-data; boundary={boundary}'
+            }
+            response = requests.request("POST", url, headers=headers, data=payload, files=files)        
     
     @stack.command()
     def posttakeoff(self, acidx : 'acid'):
 
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
-    
+        operator_token = self.token_ids[self.operator[acidx]]
+        
         # get route 
         route = bs.traf.ap.route[acidx]
 
@@ -245,7 +247,7 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.operator_token[acidx]}',
+        'Authorization': f'Bearer {operator_token}',
         'content-type': 'application/json'
         }
 
@@ -328,6 +330,8 @@ class Unifly(Entity):
             if bs.traf.ap.route[acidx].wplat == [] or not self.airborne[acidx]:
                 continue
 
+            operator_token = self.token_ids[self.operator[acidx]]
+
             route = bs.traf.ap.route[acidx]
 
             # make list of coordinates with wplat wplon
@@ -345,7 +349,7 @@ class Unifly(Entity):
             "speed": 5
             })
             headers = {
-            'Authorization': f'Bearer {self.operator_token[acidx]}',
+            'Authorization': f'Bearer {operator_token}',
             'content-type': 'application/json'
             }
 
@@ -359,7 +363,7 @@ class Unifly(Entity):
 
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
-
+        operator_token = self.token_ids[self.operator[acidx]]
         # get route 
         route = bs.traf.ap.route[acidx]
 
@@ -380,7 +384,7 @@ class Unifly(Entity):
         })
         headers = {
         'Accept': 'application/json',
-        'Authorization': f'Bearer {self.operator_token[acidx]}',
+        'Authorization': f'Bearer {operator_token}',
         'content-type': 'application/json'
         }
 
