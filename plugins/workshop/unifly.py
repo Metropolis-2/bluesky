@@ -207,7 +207,12 @@ class Unifly(Entity):
         
         '''
 
-        print(f'[blue]Posting draft operation for acid: [green]{bs.traf.id[acidx]}[/] with uuid: [green]{self.uuid[acidx]}')
+        # get the acid
+        acid = bs.traf.id[acidx]
+        
+        # print some stuff
+        console.rule(style='green')
+        print(f'[blue]Posting draft operation for acid: [green]{acid}[/] with uuid: [green]{self.uuid[acidx]}')
 
         # The first step is to get the operator token and assign an operator to each aircraft
         self.operator[acidx] = operator
@@ -218,7 +223,11 @@ class Unifly(Entity):
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
         start = datetime.datetime.now()
         end = start + timedelta(minutes=10)
-        
+
+        # get the contact information for the uas from self.pilots_dict
+        pilot_contact = self.pilots_dict[operator][0]['contact']
+        pilot_uuid = self.pilots_dict[operator][0]['user']
+
         # prepare message for operation
         url = f"{self.base_url}/api/uasoperations/draft"
 
@@ -257,13 +266,8 @@ class Unifly(Entity):
             },
             "additionalInformation": "Description for the UAS operation",
             "crew": {
-            "contact": {
-                "lastName": "Metropolis 2",
-                "firstName": "Test Operator A",
-                "email": "t.lundby+mptesta@unifly.aero",
-                "name": "Metropolis 2 Test Operator A"
-            },
-            "pilot": "0d03e61b-411f-43b1-8862-8f241b6f49f1"
+            "contact": pilot_contact,
+            "pilot": pilot_uuid,
             },
             "rulesetCode": "DEMO",
             "priorityGroup": "PRIORITY_GROUP_DEFAULT",
@@ -287,10 +291,10 @@ class Unifly(Entity):
         if response.status_code == 200:
             op_uuid = response.json()['uniqueIdentifier']
             self.opuid[acidx] = op_uuid
-            print(f'[blue]Successfully posted draft operation for acid [green]{bs.traf.id[acidx]}[/] with operation id: [green]{op_uuid}')
+            print(f'[blue]Successfully posted draft operation for acid [green]{acid}[/] with operation id: [green]{op_uuid}')
         else:
             console.rule(style='red')
-            print(f'[red]Failed to post draft operation for acid [green]{bs.traf.id[acidx]}')
+            print(f'[red]Failed to post draft operation for acid [green]{acid}')
             print(f'[red]Status Code: [cyan]{response.status_code}')
             print(response.json())
             console.rule(style='red')
@@ -299,7 +303,7 @@ class Unifly(Entity):
         sleep(5)
 
         # The second step is to publish the draft operation
-        print(f'[blue]Publishing UAS operation with opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+        print(f'[blue]Publishing UAS operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
 
         # Prepare the message for publishing
         url = f"{self.base_url}/api/uasoperations/{op_uuid}/publish"
@@ -312,10 +316,10 @@ class Unifly(Entity):
         response = requests.request("POST", url, headers=headers, data=payload)
         
         if response.status_code == 200:
-            print(f'[blue]Successfully published this operation with operation id: [green]{op_uuid}')
+            print(f'[blue]Successfully published operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
         else:
             console.rule(style='red')
-            print(f'[red]Failed to publish this operation with operation id: [green]{op_uuid}')
+            print(f'[red]Failed to publish operation for acid: {acid} with operation id: [green]{op_uuid}')
             print(f'[red]Status Code: [cyan]{response.status_code}')
             print(response.json())
             console.rule(style='red')
@@ -324,7 +328,7 @@ class Unifly(Entity):
         sleep(2)
 
         # The third step is to request action items
-        print(f'[blue]Requesting action items for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+        print(f'[blue]Requesting action items for acid: [green]{acid}[/] witb operation id: [green]{op_uuid}')
 
         # Prepare the message for asking for action items
         url = f"{self.base_url}/api/uasoperations/{op_uuid}/actionItems"
@@ -334,7 +338,7 @@ class Unifly(Entity):
         # Check if you need to ask for permission
         if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
             
-            print(f'[blue]Requesting permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+            print(f'[blue]Requesting permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
 
             # get the action unique id
             action_uid = response.json()[0]['uniqueIdentifier']
@@ -371,10 +375,13 @@ class Unifly(Entity):
             response = requests.request("POST", url, headers=headers, data=payload, files=files)       
 
             if response.status_code == 201:
-                print(f'[blue]Successfully requested permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}') 
+                print(f'[blue]Successfully requested permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}') 
+                print(f'[bold blue]Aircraft with acid: [green]{acid}[/] is waiting for take off command.')
+                console.rule(style='green')
+
             else:
                 console.rule(style='red')
-                print(f'[red]Failed to request permission for opid: [green]{op_uuid}[/] for acid: [green]{bs.traf.id[acidx]}')
+                print(f'[red]Failed to request permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
                 print(f'[red]Status Code: [cyan]{response.status_code}')
                 print(response.json())
                 console.rule(style='red')
