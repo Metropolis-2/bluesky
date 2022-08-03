@@ -15,10 +15,8 @@ _srcpath = Path('')
 
 def resolve_path(path):
     ''' Resolve a path to BlueSky-related (data) files. Adds base path to relative paths.
-
         Arguments:
         - path: The path to resolve
-
         Returns:
         - resolved path
     '''
@@ -47,11 +45,24 @@ def init(cfgfile=''):
 
     if not cfgfile:
         cfgfile = _basepath / 'settings.cfg'
+
+        # check if config file exists
+        if not cfgfile.is_file():
+            # If not, create a default config file
+            print(f'Creating default config file "{cfgfile}"')
+            shutil.copyfile(_srcpath / 'data/default.cfg', cfgfile)
+  
     print(f'Reading config from {cfgfile}')
     exec(compile(open(cfgfile).read().replace('\\', '/'), cfgfile, 'exec'), globals())
 
     # Store name of config file
     globals()['_cfgfile'] = cfgfile
+
+    # populate some directories in case they don't exist if using from source 
+    for d in ('output', 'data/cache'):
+        if not (_basepath / d).is_dir():
+            print(f'Creating directory "{_basepath / d}"')
+            (_basepath / d).mkdir(parents=True, exist_ok=True)
 
     return True
 
@@ -101,11 +112,9 @@ _settings = list()
 def set_variable_defaults(**kwargs):
     ''' Register a default value for a configuration variable. Use this functionality
         in plugins to make sure that configuration variables are available upon usage.
-
         Example:
             from bluesky import settings
             settings.set_variable_defaults(var1=1.0, var2=[1, 2, 3])
-
             This will make settings.var1 and settings.var2 available, with the
             provided default values.'''
     for key, value in kwargs.items():
