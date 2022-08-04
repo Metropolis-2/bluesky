@@ -211,7 +211,7 @@ class Unifly(Entity):
         acid = bs.traf.id[acidx]
         
         # print some stuff
-        console.rule(style='green')
+        console.rule(style='green', title=f'[bold blue]Posting UAS operation for aircraft with acid:[bold green] {acid}')
         print(f'[blue]Posting draft operation for acid: [green]{acid}[/] with uuid: [green]{self.uuid[acidx]}')
 
         # The first step is to get the operator token and assign an operator to each aircraft
@@ -424,7 +424,7 @@ class Unifly(Entity):
         response = requests.request("POST", url, headers=headers, data=payload)
 
         if response.status_code == 200:
-            print(f'[blue]Successfully posted takeoff for acid [green]{bs.traf.id[acidx]}[/]')
+            print(f'[blue]Successfully posted takeoff for aircraft with acid: [green]{bs.traf.id[acidx]}[/]')
         else:
             console.rule(style='red')
             print(f'[red]Failed to post takeoff for acid [green]{bs.traf.id[acidx]}')
@@ -534,10 +534,10 @@ class Unifly(Entity):
             response = requests.request("POST", url, headers=headers, data=payload)
 
             if response.status_code == 200:
-                print(f'[blue]Posting telemetry for acid [green]{acid}[/]')
+                print(f'[blue]Posting telemetry for aircraft with acid: [green]{acid}[/]')
             else:
                 console.rule(style='red')
-                print(f'[red]Failed to post telemetry for acid [green]{acid}')
+                print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
                 print(f'[red]Status Code: [cyan]{response.status_code}')
                 print(response.json())
                 console.rule(style='red')
@@ -548,7 +548,7 @@ class Unifly(Entity):
         '''
         Post landing for a UAS.
         '''
-        # TODO: take off real drones around this time from fligtmanaget
+        # TODO: take off real drones around this time from fligtmanager
         # stack.stack('takeoffac', acidx)
         
         # get coordinates of landing
@@ -577,10 +577,10 @@ class Unifly(Entity):
         response = requests.request("POST", url, headers=headers, data=payload)
 
         if response.status_code == 200:
-            print(f'[blue]Successfully posted landing for acid [green]{bs.traf.id[acidx]}[/]')
+            print(f'[blue]Successfully posted landing for aircraft with acid: [green]{bs.traf.id[acidx]}[/]')
         else:
             console.rule(style='red')
-            print(f'[red]Failed to post landing for acid [green]{bs.traf.id[acidx]}')
+            print(f'[red]Failed to post landing for aircraft with acid: [green]{bs.traf.id[acidx]}')
             print(f'[red]Status Code: [cyan]{response.status_code}')
             print(response.json())
             console.rule(style='red')
