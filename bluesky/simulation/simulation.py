@@ -197,10 +197,10 @@ class Simulation:
         self.reset()
         try:
             scentime, scencmd = zip(*[tc for tc in simstack.readscn(fname)])
-            # Sort the commands by time
-            scentime, scencmd = zip(*sorted(zip(scentime, scencmd)))
-            # Convert to lists
-            scentime, scencmd = list(scentime), list(scencmd)
+            # # Sort the commands by time
+            # scentime, scencmd = zip(*sorted(zip(scentime, scencmd)))
+            # # Convert to lists
+            # scentime, scencmd = list(scentime), list(scencmd)
             bs.net.send_event(b'BATCH', (scentime, scencmd))
         except FileNotFoundError:
             return False, f'BATCH: File not found: {fname}'
