@@ -5,8 +5,16 @@ import codecs
 import datetime
 from datetime import timedelta
 from time import sleep
-from rich import print
-from rich.console import Console
+
+try:
+    from rich import print
+    from rich.console import Console
+
+except ImportError:
+    class Console:
+        def rule(self, style=None, title=None, **kwargs):
+            print(title)
+
 console = Console()
 
 import bluesky as bs
