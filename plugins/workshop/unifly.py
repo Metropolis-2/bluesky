@@ -61,6 +61,7 @@ def init_plugin():
 
     return config
 
+end = ''
 class Unifly(Entity):
     
     def __init__(self):
@@ -72,6 +73,7 @@ class Unifly(Entity):
             self.airborne  = np.array([], dtype=bool)
             self.ga_flight = np.array([], dtype=bool)
             self.operator  = np.array([], dtype=str)
+            self.op_start_time =  np.array([], dtype=object)
         
         # get defaults from settings
         self.base_url = settings.unifly_base_url
@@ -113,9 +115,14 @@ class Unifly(Entity):
 
         self.airborne[-n:] = False
 
-        self.ga_flight[-n:] = False
+        if acid == 'HELI1':
+            self.ga_flight[-n:] = True
+        else:
+            self.ga_flight[-n:] = False
 
         self.operator[-n:] = ''
+
+        self.op_start_time[-n:] = ''
 
     # TODO: make it smart and just call when failing
     # TODO: differentiate between operators (A and B)
@@ -202,6 +209,7 @@ class Unifly(Entity):
     def update_authentication_timed(self):
         self.update_authentication()
 
+
     @stack.command()
     def postuasop(self, acidx : 'acid', operator, alt):
         '''
@@ -214,6 +222,7 @@ class Unifly(Entity):
         4. If action items permissions, POST permission
         
         '''
+        global end
 
         # get the acid
         acid = bs.traf.id[acidx]
@@ -230,11 +239,17 @@ class Unifly(Entity):
         route = bs.traf.ap.route[acidx]
         coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
         start = datetime.datetime.now()
-        end = start + timedelta(minutes=10)
+        self.op_start_time[acidx] = start.strftime("%Y-%m-%dT%H:%M:%S+02:00")
+
+        if not end:
+            end = (start + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S+02:00")
 
         # get the contact information for the uas from self.pilots_dict
         pilot_contact = self.pilots_dict[operator][0]['contact']
         pilot_uuid = self.pilots_dict[operator][0]['user']
+
+        # set priorority
+        priority = self.priority_levels[1] if acid == 'B1' else self.priority_levels[0]
 
         # prepare message for operation
         url = f"{self.base_url}/api/uasoperations/draft"
@@ -247,9 +262,9 @@ class Unifly(Entity):
         },
         "properties": {
             "geoZone": {
-            "startTime": start.strftime("%Y-%m-%dT%H:%M:%S+02:00"),
-            "endTime": end.strftime("%Y-%m-%dT%H:%M:%S+02:00"),
-            "name": "GCS Test operation",
+            "startTime": self.op_start_time[acidx],
+            "endTime": end,
+            "name": "BlueSky operation",
             "lowerLimit": {
                 "altitude": 0,
                 "unit": "M",
@@ -278,7 +293,7 @@ class Unifly(Entity):
             "pilot": pilot_uuid,
             },
             "rulesetCode": "DEMO",
-            "priorityGroup": "PRIORITY_GROUP_DEFAULT",
+            "priorityGroup": priority,
             "uases": [
             self.uuid[acidx]
             ],
@@ -445,57 +460,122 @@ class Unifly(Entity):
 
         print(f"[green]{bs.traf.id[acidx]} [blue]is airborne")
 
+    @stack.command()
     def postnewflightplan(self, acidx : 'acid'):
-        pass
+
+        acid = bs.traf.id[acidx]
+
+        console.rule(style='green', title=f'[bold blue]Posting modified UAS operation for aircraft with acid:[bold green] {acid}')
+        print(f'[blue]Posting modified operation for acid: [green]{acid}[/] with uuid: [green]{self.uuid[acidx]}')
+
+        # get coordinates of route
+        route = bs.traf.ap.route[acidx]
+        coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+
+        # Get all tokens and ids
+        operator_token = self.token_ids[self.operator[acidx]]
+        opuid = self.opuid[acidx]
+        uuid = self.uuid[acidx]
+
+
+        url = f"{self.base_url}/api/uasoperations/{opuid}"
+
+
+        payload = json.dumps({
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": coordinates
+        },
+        "properties": {
+            "geoZone": {
+            "startTime": self.op_start_time[acidx],
+            "endTime": end,
+            "name": "BlueSky operation - modified",
+            "lowerLimit": {
+                "altitude": 0,
+                "unit": "M",
+                "reference": "GND",
+                "isMostAccurate": False
+            },
+            "upperLimit": {
+                "altitude": 80,
+                "unit": "M",
+                "reference": "GND",
+                "isMostAccurate": False
+            }
+            },
+            "uniqueIdentifier": opuid,
+            "buffer": 2,
+            "uases": [
+            uuid
+            ]
+        }
+        })
+        headers = {
+        'Content-Type': 'application/vnd.geo+json',
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {operator_token}'
+        }
+
+        response = requests.request("PUT", url, headers=headers, data=payload)
+
+        if response.status_code == 200:
+            print(f'[blue]Successfully posted modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post modified operation for acid [green]{acid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+            return
+        
+        console.rule(style='green')
 
     def blueskysendsalert(self, acidx : 'acid'):
         pass
 
-    @stack.command()
-    def postgaflight(self, acidx : 'acid'):
+    @timed_function(dt=1)
+    def postgaflight(self):
         # TODO: test
-        # get route 
-        route = bs.traf.ap.route[acidx]
-        self.ga_flight[acidx] = True
+        # get route
 
-        # TODO: finish this
+        for acidx, acid in enumerate(bs.traf.id):
+            
+            if not self.ga_flight[acidx]:
+                continue
 
-        # make list of coordinates with wplat wplon
-        coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
 
-        url = "https://portal.eu.unifly.tech/api/tracking"
+            url = "https://portal.eu.unifly.tech/api/tracking"
 
-        payload = json.dumps({
-        "apiKey": "TUD_Kp37f9R",
-        "identification": "78AF18",
-        "callSign": "DOC99",
-        "timestamp":  datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
-        "vehicleType": "AIRPLANE",
-        "location": {
-            "longitude": coordinates[0][0],
-            "latitude": coordinates[0][1]
-        },
-        "altitude": {
-            "altitude": 0,
-            "unit": "ft",
-            "reference": "MSL"
-        },
-        "heading": {
-            "trueHeading": 90
-        },
-        "aircraftData": {
-            "groundSpeed": 0
-        }
-        })
-        headers = {
-        'Content-Type': 'application/json'
-        }
+            payload = json.dumps({
+            "apiKey": "TUD_Kp37f9R",
+            "identification": "78AF18",
+            "callSign": "DOC99",
+            "timestamp":  datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+            "vehicleType": "AIRPLANE",
+            "location": {
+                "longitude": bs.traf.lon[acidx],
+                "latitude": bs.traf.lat[acidx]
+            },
+            "altitude": {
+                "altitude": bs.traf.alt[acidx],
+                "unit": "ft",
+                "reference": "MSL"
+            },
+            "heading": {
+                "trueHeading": bs.traf.hdg[acidx],
+            },
+            "aircraftData": {
+                "groundSpeed": bs.traf.gs[acidx],
+            }
+            })
+            headers = {
+            'Content-Type': 'application/json'
+            }
 
-        response = requests.request("POST", url, headers=headers, data=payload)
+            response = requests.request("POST", url, headers=headers, data=payload)
 
-        print(response.json())
-
-        # triger timed function to send emergency message every second with updated position, hdg, gs, altitude
 
     @timed_function(dt=1)
     def posttelemetry(self):
@@ -516,6 +596,9 @@ class Unifly(Entity):
             if bs.traf.ap.route[acidx].wplat == [] or not self.airborne[acidx]:
                 continue
 
+            if self.ga_flight[acidx]:
+                continue
+
             operator_token = self.token_ids[self.operator[acidx]]
 
             route = bs.traf.ap.route[acidx]
@@ -526,13 +609,13 @@ class Unifly(Entity):
             payload = json.dumps({
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
             "location": {
-                "longitude": coordinates[0][0],
-                "latitude": coordinates[0][1]
+                "longitude": bs.traf.lon[acidx],
+                "latitude": bs.traf.lat[acidx]
             },
-            "altitudeMSL": 35,
-            "altitudeAGL": 20,
-            "heading": 90,
-            "speed": 5
+            "altitudeMSL": bs.traf.alt[acidx],
+            "altitudeAGL": bs.traf.alt[acidx] + 2,
+            "heading": bs.traf.hdg[acidx],
+            "speed": bs.traf.gs[acidx],
             })
             headers = {
             'Authorization': f'Bearer {operator_token}',
