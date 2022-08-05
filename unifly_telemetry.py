@@ -5,6 +5,9 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit
 import requests
 import json
+from time import sleep
+
+# TODO: move requests outisde of client and maybe no need to disable telemetry
 try:
     from rich import print
     from rich.console import Console
@@ -94,6 +97,9 @@ class TextClient(Client):
             
             console.rule(style='green')
 
+        elif name == b'POSTUASOP':
+            self.post_uas_op(data)
+
     def stream(self, name, data, sender_id):
 
         if name == b'POSTTELEMETRY':
@@ -120,6 +126,109 @@ class TextClient(Client):
         ''' Stack function to send stack commands to BlueSky. '''
         self.send_event(b'STACK', text)
 
+    def post_uas_op(data):
+        
+        response = requests.request("POST", url, headers=headers, data=payload)
+
+        if response.status_code == 200:
+            op_uuid = response.json()['uniqueIdentifier']
+            print(f'[blue]Successfully posted draft operation for acid [green]{acid}[/] with operation id: [green]{op_uuid}')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post draft operation for acid [green]{acid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+            return
+        # sleep for 1 second before Publishing the draft operation
+        sleep(1)
+
+        # The second step is to publish the draft operation
+        print(f'[blue]Publishing UAS operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+
+        # Prepare the message for publishing
+        url = f"{self.base_url}/api/uasoperations/{op_uuid}/publish"
+        payload = ""
+        headers = {
+        'Content-Type': 'application/vnd.geo+json',
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {operator_token}'
+        }
+        response = requests.request("POST", url, headers=headers, data=payload)
+        
+        if response.status_code == 200:
+            print(f'[blue]Successfully published operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to publish operation for acid: {acid} with operation id: [green]{op_uuid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
+
+        # sleep 1 second before requesting action items
+        sleep(1)
+
+        # The third step is to request action items
+        print(f'[blue]Requesting action items for acid: [green]{acid}[/] witb operation id: [green]{op_uuid}')
+
+        # Prepare the message for asking for action items
+        url = f"{self.base_url}/api/uasoperations/{op_uuid}/actionItems"
+        payload={}
+        response = requests.request("GET", url, headers=headers, data=payload)
+
+        # Check if you need to ask for permission
+        if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
+            
+            print(f'[blue]Requesting permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+
+            # get the action unique id
+            action_uid = response.json()[0]['uniqueIdentifier']
+
+            # Prepare the permission request
+            url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uid}/request"
+            now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+            payload_key_meta = {
+            'uniqueIdentifier': '{{'+action_uid+'}}',
+            'additionalData': {},
+            'permissionRemark': {
+                'message': {
+                'message': 'test',
+                'timestamp': now
+                }
+            }
+            }
+            files = []
+            boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
+            dataList = []
+            dataList.append(codecs.encode(f'--{boundary}'))
+            dataList.append(codecs.encode('Content-Disposition: form-data; name=meta;'))
+            dataList.append(codecs.encode('Content-Type: {}'.format('application/json')))
+            dataList.append(codecs.encode(''))
+            dataList.append(codecs.encode(json.dumps(payload_key_meta)))
+            dataList.append(codecs.encode(f'--{boundary}--'))
+            dataList.append(codecs.encode(''))
+            payload = b'\r\n'.join(dataList)
+
+            headers = {
+            'Authorization': f'Bearer {operator_token}',
+            'Content-type': f'multipart/form-data; boundary={boundary}'
+            }
+            response = requests.request("POST", url, headers=headers, data=payload, files=files)       
+
+            if response.status_code == 201:
+                print(f'[blue]Successfully requested permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}') 
+                print(f'[bold blue]Aircraft with acid: [green]{acid}[/] is waiting for take off command.')
+                console.rule(style='green')
+
+            else:
+                console.rule(style='red')
+                print(f'[red]Failed to request permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+                print(f'[red]Status Code: [cyan]{response.status_code}')
+                print(response.json())
+                console.rule(style='red')
+
+        # send the opid back to sim
+        op_uuid
 
 class Echobox(QTextEdit):
     ''' Text box to show echoed text coming from BlueSky. '''

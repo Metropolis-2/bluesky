@@ -321,7 +321,6 @@ class Unifly(Entity):
 
         if response.status_code == 200:
             op_uuid = response.json()['uniqueIdentifier']
-            self.opuid[acidx] = op_uuid
             print(f'[blue]Successfully posted draft operation for acid [green]{acid}[/] with operation id: [green]{op_uuid}')
         else:
             console.rule(style='red')
@@ -330,8 +329,8 @@ class Unifly(Entity):
             print(response.json())
             console.rule(style='red')
             return
-        # sleep for 5 seconds before Publishing the draft operation
-        sleep(5)
+        # sleep for 1 second before Publishing the draft operation
+        sleep(1)
 
         # The second step is to publish the draft operation
         print(f'[blue]Publishing UAS operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
@@ -355,8 +354,8 @@ class Unifly(Entity):
             print(response.json())
             console.rule(style='red')
 
-        # sleep two seconds before requesting action items
-        sleep(2)
+        # sleep 1 second before requesting action items
+        sleep(1)
 
         # The third step is to request action items
         print(f'[blue]Requesting action items for acid: [green]{acid}[/] witb operation id: [green]{op_uuid}')
@@ -416,6 +415,9 @@ class Unifly(Entity):
                 print(f'[red]Status Code: [cyan]{response.status_code}')
                 print(response.json())
                 console.rule(style='red')
+
+        # set some ids to the traffic arrays
+        self.opuid[acidx] = op_uuid
 
     @stack.command()
     def posttakeoff(self, acidx : 'acid'):
