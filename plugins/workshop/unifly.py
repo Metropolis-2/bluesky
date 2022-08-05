@@ -124,8 +124,6 @@ class Unifly(Entity):
 
         self.op_start_time[-n:] = ''
 
-    # TODO: make it smart and just call when failing
-    # TODO: differentiate between operators (A and B)
     def update_authentication(self):
         '''
         Update the authentication tokens for the operators
@@ -205,11 +203,17 @@ class Unifly(Entity):
         print(self.pilots_dict)
 
     @timed_function(dt=120)
-    # TODO: delete this when smart
     def update_authentication_timed(self):
+        print('[bold magenta]Updating authentication...')
         self.update_authentication()
+        print('[bold magenta]Successfully updated authentication!')
 
-
+    @stack.command()
+    def forceauth(self):
+        ''' Force authentication update in case of error'''
+        print('[bold magenta]Forcing authentication...')
+        self.update_authentication()
+    
     @stack.command()
     def postuasop(self, acidx : 'acid', operator, alt):
         '''
@@ -409,12 +413,13 @@ class Unifly(Entity):
                 print(response.json())
                 console.rule(style='red')
 
-
     @stack.command()
     def posttakeoff(self, acidx : 'acid'):
         '''
         Post takeoff for a UAS.
         '''
+
+        acid = bs.traf.id[acidx]
 
         # TODO: take off real drones around this time from fligtmanaget
         # stack.stack('takeoffac', acidx)
@@ -444,17 +449,17 @@ class Unifly(Entity):
         'content-type': 'application/json'
         }
 
-        response = requests.request("POST", url, headers=headers, data=payload)
+        data = {
+            'method': 'POST',
+            'url'     : url,
+            'headers' : headers,
+            'data'    : payload,
+            'acid'    : acid,
+        }
 
-        if response.status_code == 200:
-            print(f'[blue]Successfully posted takeoff for aircraft with acid: [green]{bs.traf.id[acidx]}[/]')
-        else:
-            console.rule(style='red')
-            print(f'[red]Failed to post takeoff for acid [green]{bs.traf.id[acidx]}')
-            print(f'[red]Status Code: [cyan]{response.status_code}')
-            print(response.json())
-            console.rule(style='red')
-            return
+        bs.net.send_event(b'POSTTAKEOFF', data)
+        
+        print(f'[blue]Attemptint to post takeoff for aircraft with acid: [green]{acid}[/]')
 
         self.airborne[acidx] = True
 
@@ -537,16 +542,14 @@ class Unifly(Entity):
 
     @timed_function(dt=1)
     def postgaflight(self):
-        # TODO: test
-        # get route
 
+        data = {}
         for acidx, acid in enumerate(bs.traf.id):
             
             if not self.ga_flight[acidx]:
                 continue
 
-
-            url = "https://portal.eu.unifly.tech/api/tracking"
+            url = f"{self.base_url}/api/tracking"
 
             payload = json.dumps({
             "apiKey": "TUD_Kp37f9R",
@@ -574,37 +577,42 @@ class Unifly(Entity):
             'Content-Type': 'application/json'
             }
 
-            response = requests.request("POST", url, headers=headers, data=payload)
+            data_acid = {
+                'method': 'POST',
+                'url'     : url,
+                'headers' : headers,
+                'data'    : payload,
+            }
 
+            data[acid] = data_acid
+
+        if data:
+            bs.net.send_stream(b'POSTGAFLIGHT', data)
 
     @timed_function(dt=1)
     def posttelemetry(self):
+        '''
+        Post telemetry data to unifly client.
+        '''
 
-        # TODO: updated position, hdg, gs, altitude
-        # TODO : make sure route is available at beginning of scenario
-
-        # if GA emergency vehicle use postemergency api, for that one scenario
-        
+        data = {}        
         for acidx, acid in enumerate(bs.traf.id):
-
-            opuid = self.opuid[acidx]
-            uuid = self.uuid[acidx]
             
-            url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/track"
-
-            # if route is empty continue
+            # if route is empty or flight is not airborne, skip
             if bs.traf.ap.route[acidx].wplat == [] or not self.airborne[acidx]:
                 continue
-
+            
+            # if aircraft is not a UAS, skip
             if self.ga_flight[acidx]:
                 continue
 
+            # get tokens
+            opuid = self.opuid[acidx]
+            uuid = self.uuid[acidx]
             operator_token = self.token_ids[self.operator[acidx]]
 
-            route = bs.traf.ap.route[acidx]
-
-            # make list of coordinates with wplat wplon
-            coordinates = [[lon, lat] for lat, lon in zip(route.wplat, route.wplon)]
+            # prepare messages
+            url = f"{self.base_url}/api/uasoperations/{opuid}/uases/{uuid}/track"
 
             payload = json.dumps({
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
@@ -622,23 +630,30 @@ class Unifly(Entity):
             'content-type': 'application/json'
             }
 
-            response = requests.request("POST", url, headers=headers, data=payload)
+            data_acid = {
+                'method': 'POST',
+                'url'     : url,
+                'headers' : headers,
+                'data'    : payload,
+            }
 
-            if response.status_code == 200:
-                print(f'[blue]Posting telemetry for aircraft with acid: [green]{acid}[/]')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
+            # add to dictionary
+            data[acid] = data_acid
 
+            print(f'[blue]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
+        
+        if data:
+            bs.net.send_stream(b'POSTTELEMETRY', data)
 
     @stack.command()
     def postlanding(self, acidx : 'acid'):
         '''
         Post landing for a UAS.
         '''
+
+        # get acid
+        acid = bs.traf.id[acidx]
+
         # TODO: take off real drones around this time from fligtmanager
         # stack.stack('takeoffac', acidx)
         
@@ -650,14 +665,61 @@ class Unifly(Entity):
         operator_token = self.token_ids[self.operator[acidx]]
         opuid = self.opuid[acidx]
         uuid = self.uuid[acidx]
-
+        
         # prepare message
         url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/landing"
+
         payload = json.dumps({
         "endTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
         "pilotLocation": {
             "longitude": coordinates[-1][0],
             "latitude": coordinates[-1][1]
+        }
+        })
+        headers = {
+        'Accept': 'application/json',
+        'Authorization': f'Bearer {operator_token}',
+        'content-type': 'application/json'
+        }
+
+        data = {
+            'method': 'POST',
+            'url'     : url,
+            'headers' : headers,
+            'data'    : payload,
+            'acid'    : acid,
+        }
+
+        bs.net.send_event(b'POSTLANDING', data)
+        
+        print(f'[blue]Attemptint to post landing for aircraft with acid: [green]{acid}[/]')
+
+        self.airborne[acidx] = False
+
+    @stack.command()
+    def forcelanding(self, acidx : 'acid', operator):
+        '''
+        Post a forced landing for a UAS after bluesky crashes without landing UAS.
+        Requires the aircraft to be initialized in BlueSky traffic.
+        '''
+        
+        # The first step is to get the operator token and assign an operator to each aircraft
+        self.operator[acidx] = operator
+        operator_token = self.token_ids[self.operator[acidx]]
+   
+        # get tokens and ids
+        operator_token = self.token_ids[self.operator[acidx]]
+        opuid = '572e2ed5-8658-457b-980f-efbfe08f715d'
+        uuid = self.uuid[acidx]
+
+        # prepare message
+        url = f"https://portal.eu.unifly.tech/api/uasoperations/{opuid}/uases/{uuid}/landing"
+
+        payload = json.dumps({
+        "endTime": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+        "pilotLocation": {
+            "longitude":4.416856266047878,
+            "latitude": 52.171876266151514
         }
         })
         headers = {
@@ -678,5 +740,3 @@ class Unifly(Entity):
             return
 
         self.airborne[acidx] = False
-        
-
