@@ -41,7 +41,7 @@ class TextClient(Client):
 
     def event(self, name, data, sender_id):
         ''' Overridden event function to handle incoming ECHO commands. '''
-        
+
         if name == b'POSTLANDING':
             # remove acid from data
             acid = data.pop('acid')
@@ -70,6 +70,30 @@ class TextClient(Client):
                 console.rule(style='red')
                 return
 
+        elif name == b'POSTNEWFLIGHTPLAN':
+            # remove acid and other info from data
+            acid = data.pop('acid')
+            uuid = data.pop('uuid')
+            opuid = data.pop('opuid')
+
+            console.rule(style='green', title=f'[bold blue]Posting modified UAS operation for aircraft with acid:[bold green] {acid}')
+            print(f'[blue]Posting modified operation for acid: [green]{acid}[/] with uuid: [green]{uuid}')
+            
+            # send request
+            response = requests.request(**data)
+
+            if response.status_code == 200:
+                print(f'[blue]Successfully posted modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
+            else:
+                console.rule(style='red')
+                print(f'[red]Failed to post modified operation for acid [green]{acid}')
+                print(f'[red]Status Code: [cyan]{response.status_code}')
+                print(response.json())
+                console.rule(style='red')
+                return
+            
+            console.rule(style='green')
+
     def stream(self, name, data, sender_id):
 
         if name == b'POSTTELEMETRY':
@@ -78,7 +102,7 @@ class TextClient(Client):
                 # send request
                 response = requests.request(**request_dict)
                 if response.status_code == 200:
-                    print(f'[blue]Posting telemetry for aircraft with acid: [green]{acid}[/]')
+                    print(f'[bright_black]Posting telemetry for aircraft with acid: [green]{acid}[/]')
                 else:
                     console.rule(style='red')
                     print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')

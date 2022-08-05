@@ -103,6 +103,10 @@ class Unifly(Entity):
         # save priorities
         self.priority_levels = ['PRIORITY_GROUP_DEFAULT', 'PRIORITY_GROUP_PRIORITY']
 
+        # some telemetry data
+        self.telemetry_enable = True
+        self.telemetry_time_enable = 0
+
     def create(self, n=1):
         super().create(n)
 
@@ -523,18 +527,23 @@ class Unifly(Entity):
         'Authorization': f'Bearer {operator_token}'
         }
 
-        response = requests.request("PUT", url, headers=headers, data=payload)
+        data = {
+            'method': 'PUT',
+            'url'     : url,
+            'headers' : headers,
+            'data'    : payload,
+            'acid'    : acid,
+            'uuid'    : uuid,
+            'opuid'   : opuid,
+        }
 
-        if response.status_code == 200:
-            print(f'[blue]Successfully posted modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
-        else:
-            console.rule(style='red')
-            print(f'[red]Failed to post modified operation for acid [green]{acid}')
-            print(f'[red]Status Code: [cyan]{response.status_code}')
-            print(response.json())
-            console.rule(style='red')
-            return
+        bs.net.send_event(b'POSTNEWFLIGHTPLAN', data)
         
+        print(f'[blue]Attempting to post modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
+
+        # disable telemetry for about 3 simulation seconds to not overload client
+        self.disable_telemetry()
+
         console.rule(style='green')
 
     def blueskysendsalert(self, acidx : 'acid'):
@@ -542,6 +551,13 @@ class Unifly(Entity):
 
     @timed_function(dt=1)
     def postgaflight(self):
+        ''' 
+        Post a GA flight to unifly client
+        '''
+
+        # Don't send GA flight if telemtry is disabled
+        if not self.telemetry_enable:
+                return
 
         data = {}
         for acidx, acid in enumerate(bs.traf.id):
@@ -595,6 +611,14 @@ class Unifly(Entity):
         Post telemetry data to unifly client.
         '''
 
+        # first check if telemetry is enabled and enable it once simulation time is larger
+        # than time to enable
+        if not self.telemetry_enable:
+            if bs.sim.simt > self.telemetry_time_enable:
+                self.telemetry = True
+            else:
+                return
+
         data = {}        
         for acidx, acid in enumerate(bs.traf.id):
             
@@ -640,7 +664,7 @@ class Unifly(Entity):
             # add to dictionary
             data[acid] = data_acid
 
-            print(f'[blue]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
+            print(f'[bright_black]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
         
         if data:
             bs.net.send_stream(b'POSTTELEMETRY', data)
@@ -692,7 +716,7 @@ class Unifly(Entity):
 
         bs.net.send_event(b'POSTLANDING', data)
         
-        print(f'[blue]Attemptint to post landing for aircraft with acid: [green]{acid}[/]')
+        print(f'[blue]Attempting to post landing for aircraft with acid: [green]{acid}[/]')
 
         self.airborne[acidx] = False
 
@@ -709,7 +733,7 @@ class Unifly(Entity):
    
         # get tokens and ids
         operator_token = self.token_ids[self.operator[acidx]]
-        opuid = '572e2ed5-8658-457b-980f-efbfe08f715d'
+        opuid = self.opuid[acidx]
         uuid = self.uuid[acidx]
 
         # prepare message
@@ -740,3 +764,10 @@ class Unifly(Entity):
             return
 
         self.airborne[acidx] = False
+
+    def disable_telemetry(self, disable_time=3):
+        '''
+        Disable telemetry while other data is being sent for some seconds (default is 3 seconds).
+        '''
+        self.telemetry_enable = False
+        self.telemetry_time_enable = bs.sim.simt + disable_time
