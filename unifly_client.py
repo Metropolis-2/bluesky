@@ -1,5 +1,5 @@
 '''
-Client to send unifly telemetry
+Client to send unifly requests
 '''
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit
@@ -10,7 +10,6 @@ import datetime
 from datetime import timedelta
 from time import sleep
 
-# TODO: move requests outisde of client and maybe no need to disable telemetry
 try:
     from rich import print
     from rich.console import Console
@@ -54,80 +53,24 @@ class TextClient(Client):
         pass
 
     def stream(self, name, data, sender_id):
-        if name == b'POSTTELEMETRY':
 
-            for acid, request_dict in data.items():
-                # send request
-                response = requests.request(**request_dict)
-                if response.status_code == 200:
-                    print(f'[bright_black]Posting telemetry for aircraft with acid: [green]{acid}[/]')
-                else:
-                    console.rule(style='red')
-                    print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
-                    print(f'[red]Status Code: [cyan]{response.status_code}')
-                    print(response.json())
-                    console.rule(style='red')
-        
-        elif name == b'POSTGAFLIGHT':
-            for acid, request_dict in data:
-                # send request
-                response = requests.request(**request_dict)
-                print(f'[blue]Sending general aviation data for aircraft with acid: [green]{acid}[/]')
-
-        elif name == b'POSTUASOP':
-            cmdline.post_uas_op(data)
-
-        elif name == b'POSTLANDING':
-            # remove acid from data
-            acid = data.pop('acid')
-            response = requests.request(**data)
-            if response.status_code == 200:
-                print(f'[blue]Successfully posted landing for aircraft with acid: [green]{acid}[/]')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to post landing for aircraft with acid: [green]{acid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
-                return
+        if name == b'POSTUASOP':
+            post_uas_op(data)
 
         elif name == b'POSTTAKEOFF':
-            # remove acid from data
-            acid = data.pop('acid')
-            response = requests.request(**data)
-            if response.status_code == 200:
-                print(f'[blue]Successfully posted takeoff for aircraft with acid: [green]{acid}[/]')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to post takeoff for aircraft with acid: [green]{acid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
-                return
+            post_take_off(data)
+
+        if name == b'POSTTELEMETRY':
+            post_telemetry(data)
 
         elif name == b'POSTNEWFLIGHTPLAN':
-            # remove acid and other info from data
-            acid = data.pop('acid')
-            uuid = data.pop('uuid')
-            opuid = data.pop('opuid')
+            post_new_flight_plan(data)
 
-            console.rule(style='green', title=f'[bold blue]Posting modified UAS operation for aircraft with acid:[bold green] {acid}')
-            print(f'[blue]Posting modified operation for acid: [green]{acid}[/] with uuid: [green]{uuid}')
-            
-            # send request
-            response = requests.request(**data)
+        elif name == b'POSTLANDING':
+            post_landing(data)
 
-            if response.status_code == 200:
-                print(f'[blue]Successfully posted modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to post modified operation for acid [green]{acid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
-                return
-            
-            console.rule(style='green')
+        elif name == b'POSTGAFLIGHT':
+            post_ga_flight(data)
 
     def stack(self, text):
         ''' Stack function to send stack commands to BlueSky. '''
@@ -166,118 +109,185 @@ class Cmdline(QTextEdit):
         else:
             super().keyPressEvent(event)
 
-    def post_uas_op(self, data):
+def post_uas_op(data):
+    ''' Post UAS operation to unifly client. '''
+    acid = data.pop('acid')
+    operator_token = data.pop('operator_token')
+    base_url = data.pop('base_url')
+    uuid = data.pop('uuid')
 
-            acid = data.pop('acid')
-            operator_token = data.pop('operator_token')
-            base_url = data.pop('base_url')
-            uuid = data.pop('uuid')
+    console.rule(style='green', title=f'[bold blue]Posting UAS operation for aircraft with acid:[bold green] {acid}')
+    print(f'[blue]Posting draft operation for acid: [green]{acid}[/] with uuid: [green]{uuid}')
 
-            console.rule(style='green', title=f'[bold blue]Posting UAS operation for aircraft with acid:[bold green] {acid}')
-            print(f'[blue]Posting draft operation for acid: [green]{acid}[/] with uuid: [green]{uuid}')
+    response = requests.request(**data)
 
-            response = requests.request(**data)
+    if response.status_code == 200:
+        op_uuid = response.json()['uniqueIdentifier']
+        print(f'[blue]Successfully posted draft operation for acid [green]{acid}[/] with operation id: [green]{op_uuid}')
+    else:
+        console.rule(style='red')
+        print(f'[red]Failed to post draft operation for acid [green]{acid}')
+        print(f'[red]Status Code: [cyan]{response.status_code}')
+        print(response.json())
+        console.rule(style='red')
+        return
+    # sleep for 2 seconds before Publishing the draft operation
+    sleep(2)
 
-            if response.status_code == 200:
-                op_uuid = response.json()['uniqueIdentifier']
-                print(f'[blue]Successfully posted draft operation for acid [green]{acid}[/] with operation id: [green]{op_uuid}')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to post draft operation for acid [green]{acid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
-                return
-            # sleep for 2 seconds before Publishing the draft operation
-            sleep(2)
+    # The second step is to publish the draft operation
+    print(f'[blue]Publishing UAS operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
 
-            # The second step is to publish the draft operation
-            print(f'[blue]Publishing UAS operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+    # Prepare the message for publishing
+    url = f"{base_url}/api/uasoperations/{op_uuid}/publish"
+    payload = ""
+    headers = {
+    'Content-Type': 'application/vnd.geo+json',
+    'Accept': 'application/json',
+    'Authorization': f'Bearer {operator_token}'
+    }
+    response = requests.request("POST", url, headers=headers, data=payload)
+    
+    if response.status_code == 200:
+        print(f'[blue]Successfully published operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+    else:
+        console.rule(style='red')
+        print(f'[red]Failed to publish operation for acid: {acid} with operation id: [green]{op_uuid}')
+        print(f'[red]Status Code: [cyan]{response.status_code}')
+        print(response.json())
+        console.rule(style='red')
 
-            # Prepare the message for publishing
-            url = f"{base_url}/api/uasoperations/{op_uuid}/publish"
-            payload = ""
-            headers = {
-            'Content-Type': 'application/vnd.geo+json',
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {operator_token}'
+    # sleep 2 seconds before requesting action items
+    sleep(2)
+
+    # The third step is to request action items
+    print(f'[blue]Requesting action items for acid: [green]{acid}[/] witb operation id: [green]{op_uuid}')
+
+    # Prepare the message for asking for action items
+    url = f"{base_url}/api/uasoperations/{op_uuid}/actionItems"
+    payload={}
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    # Check if you need to ask for permission
+    if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
+        
+        print(f'[blue]Requesting permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+
+        # get the action unique id
+        action_uid = response.json()[0]['uniqueIdentifier']
+
+        # Prepare the permission request
+        url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uid}/request"
+        now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+        payload_key_meta = {
+        'uniqueIdentifier': '{{'+action_uid+'}}',
+        'additionalData': {},
+        'permissionRemark': {
+            'message': {
+            'message': 'test',
+            'timestamp': now
             }
-            response = requests.request("POST", url, headers=headers, data=payload)
-            
-            if response.status_code == 200:
-                print(f'[blue]Successfully published operation for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
-            else:
-                console.rule(style='red')
-                print(f'[red]Failed to publish operation for acid: {acid} with operation id: [green]{op_uuid}')
-                print(f'[red]Status Code: [cyan]{response.status_code}')
-                print(response.json())
-                console.rule(style='red')
+        }
+        }
+        files = []
+        boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
+        dataList = []
+        dataList.append(codecs.encode(f'--{boundary}'))
+        dataList.append(codecs.encode('Content-Disposition: form-data; name=meta;'))
+        dataList.append(codecs.encode('Content-Type: {}'.format('application/json')))
+        dataList.append(codecs.encode(''))
+        dataList.append(codecs.encode(json.dumps(payload_key_meta)))
+        dataList.append(codecs.encode(f'--{boundary}--'))
+        dataList.append(codecs.encode(''))
+        payload = b'\r\n'.join(dataList)
 
-            # sleep 2 seconds before requesting action items
-            sleep(2)
+        headers = {
+        'Authorization': f'Bearer {operator_token}',
+        'Content-type': f'multipart/form-data; boundary={boundary}'
+        }
+        response = requests.request("POST", url, headers=headers, data=payload, files=files)       
 
-            # The third step is to request action items
-            print(f'[blue]Requesting action items for acid: [green]{acid}[/] witb operation id: [green]{op_uuid}')
+        if response.status_code == 201:
+            print(f'[blue]Successfully requested permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}') 
+            print(f'[bold blue]Aircraft with acid: [green]{acid}[/] is waiting for take off command.')
+            console.rule(style='green')
 
-            # Prepare the message for asking for action items
-            url = f"{base_url}/api/uasoperations/{op_uuid}/actionItems"
-            payload={}
-            response = requests.request("GET", url, headers=headers, data=payload)
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to request permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
 
-            # Check if you need to ask for permission
-            if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
-                
-                print(f'[blue]Requesting permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
+    # send the opid back to sim
+    bsclient.stack(f'SETOPUID {acid} {op_uuid}')
 
-                # get the action unique id
-                action_uid = response.json()[0]['uniqueIdentifier']
+def post_take_off(data):
+    acid = data.pop('acid')
+    response = requests.request(**data)
+    if response.status_code == 200:
+        print(f'[blue]Successfully posted takeoff for aircraft with acid: [green]{acid}[/]')
+    else:
+        console.rule(style='red')
+        print(f'[red]Failed to post takeoff for aircraft with acid: [green]{acid}')
+        print(f'[red]Status Code: [cyan]{response.status_code}')
+        print(response.json())
+        console.rule(style='red')
 
-                # Prepare the permission request
-                url = f"https://portal.eu.unifly.tech/api/uasoperations/{op_uuid}/permissions/{action_uid}/request"
-                now = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
-                payload_key_meta = {
-                'uniqueIdentifier': '{{'+action_uid+'}}',
-                'additionalData': {},
-                'permissionRemark': {
-                    'message': {
-                    'message': 'test',
-                    'timestamp': now
-                    }
-                }
-                }
-                files = []
-                boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
-                dataList = []
-                dataList.append(codecs.encode(f'--{boundary}'))
-                dataList.append(codecs.encode('Content-Disposition: form-data; name=meta;'))
-                dataList.append(codecs.encode('Content-Type: {}'.format('application/json')))
-                dataList.append(codecs.encode(''))
-                dataList.append(codecs.encode(json.dumps(payload_key_meta)))
-                dataList.append(codecs.encode(f'--{boundary}--'))
-                dataList.append(codecs.encode(''))
-                payload = b'\r\n'.join(dataList)
+def post_telemetry(data):
+    for acid, request_dict in data.items():
+        # send request
+        response = requests.request(**request_dict)
+        if response.status_code == 200:
+            print(f'[bright_black]Posting telemetry for aircraft with acid: [green]{acid}[/]')
+        else:
+            console.rule(style='red')
+            print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
+            print(f'[red]Status Code: [cyan]{response.status_code}')
+            print(response.json())
+            console.rule(style='red')
 
-                headers = {
-                'Authorization': f'Bearer {operator_token}',
-                'Content-type': f'multipart/form-data; boundary={boundary}'
-                }
-                response = requests.request("POST", url, headers=headers, data=payload, files=files)       
+def post_new_flight_plan(data):
+    # remove acid and other info from data
+    acid = data.pop('acid')
+    uuid = data.pop('uuid')
+    opuid = data.pop('opuid')
 
-                if response.status_code == 201:
-                    print(f'[blue]Successfully requested permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}') 
-                    print(f'[bold blue]Aircraft with acid: [green]{acid}[/] is waiting for take off command.')
-                    console.rule(style='green')
+    console.rule(style='green', title=f'[bold blue]Posting modified UAS operation for aircraft with acid:[bold green] {acid}')
+    print(f'[blue]Posting modified operation for acid: [green]{acid}[/] with uuid: [green]{uuid}')
+    
+    # send request
+    response = requests.request(**data)
 
-                else:
-                    console.rule(style='red')
-                    print(f'[red]Failed to request permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
-                    print(f'[red]Status Code: [cyan]{response.status_code}')
-                    print(response.json())
-                    console.rule(style='red')
+    if response.status_code == 200:
+        print(f'[blue]Successfully posted modified operation for acid [green]{acid}[/] with operation id: [green]{opuid}')
+    else:
+        console.rule(style='red')
+        print(f'[red]Failed to post modified operation for acid [green]{acid}')
+        print(f'[red]Status Code: [cyan]{response.status_code}')
+        print(response.json())
+        console.rule(style='red')
+    
+    console.rule(style='green')
 
-            # send the opid back to sim
-            bsclient.stack(f'SETOPUID {acid} {op_uuid}')
+def post_ga_flight(data):
+    for acid, request_dict in data:
+        # send request
+        response = requests.request(**request_dict)
+        print(f'[bright_black]Sending general aviation data for aircraft with acid: [green]{acid}[/]')
 
+def post_landing(data):
+    # remove acid from data
+    acid = data.pop('acid')
+    response = requests.request(**data)
+    if response.status_code == 200:
+        print(f'[blue]Successfully posted landing for aircraft with acid: [green]{acid}[/]')
+    else:
+        console.rule(style='red')
+        print(f'[red]Failed to post landing for aircraft with acid: [green]{acid}')
+        print(f'[red]Status Code: [cyan]{response.status_code}')
+        print(response.json())
+        console.rule(style='red')
+        return
 
 if __name__ == '__main__':
     # Construct the Qt main object
