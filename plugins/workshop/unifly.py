@@ -1,7 +1,6 @@
 import numpy as np
 import requests
 import json
-import codecs
 import datetime
 from datetime import timedelta
 from time import sleep
@@ -61,7 +60,6 @@ def init_plugin():
 
     return config
 
-end = ''
 class Unifly(Entity):
     
     def __init__(self):
@@ -106,6 +104,9 @@ class Unifly(Entity):
         # some telemetry data
         self.telemetry_enable = True
         self.telemetry_time_enable = 0
+
+        # global end time
+        self.end_time = ''
 
     def create(self, n=1):
         super().create(n)
@@ -230,8 +231,6 @@ class Unifly(Entity):
         4. If action items permissions, POST permission
         
         '''
-        global end
-
         # get the acid
         acid = bs.traf.id[acidx]
         
@@ -249,8 +248,8 @@ class Unifly(Entity):
         start = datetime.datetime.now()
         self.op_start_time[acidx] = start.strftime("%Y-%m-%dT%H:%M:%S+02:00")
 
-        if not end:
-            end = (start + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S+02:00")
+        if not self.end_time:
+            self.end_time = (start + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S+02:00")
 
         # get the contact information for the uas from self.pilots_dict
         pilot_contact = self.pilots_dict[operator][0]['contact']
@@ -271,7 +270,7 @@ class Unifly(Entity):
         "properties": {
             "geoZone": {
             "startTime": self.op_start_time[acidx],
-            "endTime": end,
+            "endTime": self.end_time,
             "name": "BlueSky operation",
             "lowerLimit": {
                 "altitude": 0,
@@ -421,7 +420,7 @@ class Unifly(Entity):
         "properties": {
             "geoZone": {
             "startTime": self.op_start_time[acidx],
-            "endTime": end,
+            "endTime": self.end_time,
             "name": "BlueSky operation - modified",
             "lowerLimit": {
                 "altitude": 0,
@@ -655,7 +654,7 @@ class Unifly(Entity):
    
         # get tokens and ids
         operator_token = self.token_ids[self.operator[acidx]]
-        opuid = '741e90a8-9c14-447d-8880-25494a4baa18'
+        opuid = self.opuid[acidx]
         uuid = self.uuid[acidx]
 
         # prepare message
