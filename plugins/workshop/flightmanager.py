@@ -20,6 +20,7 @@ def init_plugin():
     config = {
         'plugin_name': 'FLIGHTMANAGER',
         'plugin_type': 'sim',
+        'update': flightmanager.update
     }
     return config
 
@@ -43,13 +44,47 @@ class FlightManager(Entity):
 
         self.gs[-n:] = 0.0
         self.vs[-n:] = 0.0
-            
+
     def convert_to_virtual(self, acidx):
-        # TODO: go through stack and replace commands with virtual commands
+        # TODO: TEST IT
         self.virtual_ac[acidx] = True
         self.pprz_ids[acidx] = ''
-        stack.stack(f'LNAV {bs.traf.id[acidx]} ON')
-        stack.stack(f'VNAV {bs.traf.id[acidx]} ON')
+        acid = bs.traf.id[acidx]
+
+        # if drone is moving already then it will just follow path
+        if bs.traf.gs[acidx] > 0.01:
+            return
+
+        # check route of drone
+        route = bs.traf.ap.route[acidx]
+        spd = route.wpspd[0]
+        alt = route.wpalt[0]
+
+        # in scencmd find the index of 'EXECUTEFP <acid>'
+        # scencmd = stack.stackbase.Stack.scencmd
+        # scentime = stack.stackbase.Stack.scentime
+        scentime, scencmd = stack.get_scendata()
+        idx_stack = scencmd.index(f'EXECUTEFP {acid}')
+
+        # get cmd time
+        cmd_time = scentime[idx_stack]
+
+        # insert three new commands to replace the EXECUTEFP command at cmd time
+        cmd1 = f'{acid} ALT {alt}'
+        cmd2 = f'{acid} ATALT {alt} SPD {acid} {spd}'
+        cmd3 = f'{acid} ATALT {alt} LNAV {acid} ON'
+
+        # insert the three commands into the stack, the first one replaces the EXECUTEFP command
+        # the others go after it
+        scencmd[idx_stack] = cmd1
+        scencmd.insert(idx_stack+1, cmd2)
+        scencmd.insert(idx_stack+2, cmd3)
+
+        # insert the three command times into the stack
+        scentime[idx_stack] = cmd_time
+        scentime.insert(idx_stack+1, cmd_time)
+        scentime.insert(idx_stack+2, cmd_time)
+
         return
     
     @timed_function(dt=0.05)
