@@ -42,7 +42,6 @@ class TextClient(Client):
         self.timer.start(20)
 
         self.subscribe(b'POSTTELEMETRY')
-        self.subscribe(b'POSTGAFLIGHT')
         self.subscribe(b'POSTUASOP')
         self.subscribe(b'POSTLANDING')
         self.subscribe(b'POSTTAKEOFF')
@@ -68,9 +67,6 @@ class TextClient(Client):
 
         elif name == b'POSTLANDING':
             post_landing(data)
-
-        elif name == b'POSTGAFLIGHT':
-            post_ga_flight(data)
 
     def stack(self, text):
         ''' Stack function to send stack commands to BlueSky. '''
@@ -235,16 +231,22 @@ def post_take_off(data):
 
 def post_telemetry(data):
     for acid, request_dict in data.items():
-        # send request
-        response = requests.request(**request_dict)
-        if response.status_code == 200:
-            print(f'[bright_black]Posting telemetry for aircraft with acid: [green]{acid}[/]')
+
+        if not acid == 'HELI1':
+            # send request
+            response = requests.request(**request_dict)
+            if response.status_code == 200:
+                print(f'[bright_black]Posting telemetry for aircraft with acid: [green]{acid}[/]')
+            else:
+                console.rule(style='red')
+                print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
+                print(f'[red]Status Code: [cyan]{response.status_code}')
+                print(response.json())
+                console.rule(style='red')
         else:
-            console.rule(style='red')
-            print(f'[red]Failed to post telemetry for aircraft with acid: [green]{acid}')
-            print(f'[red]Status Code: [cyan]{response.status_code}')
-            print(response.json())
-            console.rule(style='red')
+            # send request
+            response = requests.request(**request_dict)
+            print(f'[bright_black]Sending general aviation data for aircraft with acid: [green]{acid}[/]')
 
 def post_new_flight_plan(data):
     # remove acid and other info from data
@@ -268,12 +270,6 @@ def post_new_flight_plan(data):
         console.rule(style='red')
     
     console.rule(style='green')
-
-def post_ga_flight(data):
-    for acid, request_dict in data:
-        # send request
-        response = requests.request(**request_dict)
-        print(f'[bright_black]Sending general aviation data for aircraft with acid: [green]{acid}[/]')
 
 def post_landing(data):
     # remove acid from data

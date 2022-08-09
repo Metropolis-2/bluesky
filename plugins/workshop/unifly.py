@@ -213,6 +213,9 @@ class Unifly(Entity):
         self.update_authentication()
         print('[bold magenta]Successfully updated authentication!')
 
+        self.disable_telemetry()
+
+
     @stack.command()
     def forceauth(self):
         ''' Force authentication update in case of error'''
@@ -470,61 +473,9 @@ class Unifly(Entity):
     def blueskysendsalert(self, acidx : 'acid'):
         pass
 
-    @timed_function(dt=1)
-    def postgaflight(self):
-        ''' 
-        Post a GA flight to unifly client
-        '''
-
-        # Don't send GA flight if telemtry is disabled
-        if not self.telemetry_enable:
-                return
-
-        data = {}
-        for acidx, acid in enumerate(bs.traf.id):
-            
-            if not self.ga_flight[acidx]:
-                continue
-
-            url = f"{self.base_url}/api/tracking"
-
-            payload = json.dumps({
-            "apiKey": "TUD_Kp37f9R",
-            "identification": "78AF18",
-            "callSign": "DOC99",
-            "timestamp":  datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
-            "vehicleType": "AIRPLANE",
-            "location": {
-                "longitude": bs.traf.lon[acidx],
-                "latitude": bs.traf.lat[acidx]
-            },
-            "altitude": {
-                "altitude": bs.traf.alt[acidx],
-                "unit": "ft",
-                "reference": "MSL"
-            },
-            "heading": {
-                "trueHeading": bs.traf.hdg[acidx],
-            },
-            "aircraftData": {
-                "groundSpeed": bs.traf.gs[acidx],
-            }
-            })
-            headers = {
-            'Content-Type': 'application/json'
-            }
-
-            data_acid = {
-                'method': 'POST',
-                'url'     : url,
-                'headers' : headers,
-                'data'    : payload,
-            }
-
-            data[acid] = data_acid
-
-        if data:
-            bs.net.send_stream(b'POSTGAFLIGHT', data)
+    @stack.command()
+    def postgaflight(self, acidx : 'acid'):
+        self.airborne[acidx] = True
 
     @timed_function(dt=1)
     def posttelemetry(self):
@@ -542,50 +493,95 @@ class Unifly(Entity):
 
         data = {}        
         for acidx, acid in enumerate(bs.traf.id):
-            
-            # if route is empty or flight is not airborne, skip
-            if bs.traf.ap.route[acidx].wplat == [] or not self.airborne[acidx]:
+
+            # if not airborne, skip
+            if not self.airborne[acidx]:
                 continue
             
             # if aircraft is not a UAS, skip
-            if self.ga_flight[acidx]:
-                continue
+            if not self.ga_flight[acidx]:
+                
+                # if route is empty continue
+                if bs.traf.ap.route[acidx].wplat == []:
+                    continue
+                
+                # get tokens
+                opuid = self.opuid[acidx]
+                uuid = self.uuid[acidx]
+                operator_token = self.token_ids[self.operator[acidx]]
 
-            # get tokens
-            opuid = self.opuid[acidx]
-            uuid = self.uuid[acidx]
-            operator_token = self.token_ids[self.operator[acidx]]
+                # prepare messages
+                url = f"{self.base_url}/api/uasoperations/{opuid}/uases/{uuid}/track"
 
-            # prepare messages
-            url = f"{self.base_url}/api/uasoperations/{opuid}/uases/{uuid}/track"
+                payload = json.dumps({
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+                "location": {
+                    "longitude": bs.traf.lon[acidx],
+                    "latitude": bs.traf.lat[acidx]
+                },
+                "altitudeMSL": bs.traf.alt[acidx],
+                "altitudeAGL": bs.traf.alt[acidx] + 2,
+                "heading": bs.traf.hdg[acidx],
+                "speed": bs.traf.gs[acidx],
+                })
+                headers = {
+                'Authorization': f'Bearer {operator_token}',
+                'content-type': 'application/json'
+                }
 
-            payload = json.dumps({
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
-            "location": {
-                "longitude": bs.traf.lon[acidx],
-                "latitude": bs.traf.lat[acidx]
-            },
-            "altitudeMSL": bs.traf.alt[acidx],
-            "altitudeAGL": bs.traf.alt[acidx] + 2,
-            "heading": bs.traf.hdg[acidx],
-            "speed": bs.traf.gs[acidx],
-            })
-            headers = {
-            'Authorization': f'Bearer {operator_token}',
-            'content-type': 'application/json'
-            }
+                data_acid = {
+                    'method': 'POST',
+                    'url'     : url,
+                    'headers' : headers,
+                    'data'    : payload,
+                }
 
-            data_acid = {
-                'method': 'POST',
-                'url'     : url,
-                'headers' : headers,
-                'data'    : payload,
-            }
+                # add to dictionary
+                data[acid] = data_acid
 
-            # add to dictionary
-            data[acid] = data_acid
+                print(f'[bright_black]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
 
-            print(f'[bright_black]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
+            else:
+                print("sending telemetry for GA aircraft")
+                url = f"{self.base_url}/api/tracking"
+
+                payload = json.dumps({
+                "apiKey": "TUD_Kp37f9R",
+                "identification": "78AF18",
+                "callSign": "DOC99",
+                "timestamp":  datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+02:00"),
+                "vehicleType": "AIRPLANE",
+                "location": {
+                    "longitude": bs.traf.lon[acidx],
+                    "latitude": bs.traf.lat[acidx]
+                },
+                "altitude": {
+                    "altitude": bs.traf.alt[acidx],
+                    "unit": "ft",
+                    "reference": "MSL"
+                },
+                "heading": {
+                    "trueHeading": bs.traf.hdg[acidx],
+                },
+                "aircraftData": {
+                    "groundSpeed": bs.traf.gs[acidx],
+                }
+                })
+                headers = {
+                'Content-Type': 'application/json'
+                }
+
+                data_acid = {
+                    'method': 'POST',
+                    'url'     : url,
+                    'headers' : headers,
+                    'data'    : payload,
+                }
+
+                data[acid] = data_acid
+
+                print(f'[bright_black]Attempting to post GA flight for aircraft with acid: [green]{acid}[/]')
+
         
         if data:
             bs.net.send_stream(b'POSTTELEMETRY', data)
@@ -647,7 +643,7 @@ class Unifly(Entity):
         Post a forced landing for a UAS after bluesky crashes without landing UAS.
         Requires the aircraft to be initialized in BlueSky traffic.
         '''
-        
+        # self.opuid = ['3894db92-5597-4496-94ca-f35640196f41', '304db28f-60a3-4e32-b32a-10e13547ea86', 'adfa8f86-f9d0-49c7-8aa8-60ac00bbbdcb']
         # The first step is to get the operator token and assign an operator to each aircraft
         self.operator[acidx] = operator
         operator_token = self.token_ids[self.operator[acidx]]
