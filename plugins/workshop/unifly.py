@@ -542,7 +542,6 @@ class Unifly(Entity):
                 print(f'[bright_black]Attempting to post telemetry for aircraft with acid: [green]{acid}[/]')
 
             else:
-                print("sending telemetry for GA aircraft")
                 url = f"{self.base_url}/api/tracking"
 
                 payload = json.dumps({
