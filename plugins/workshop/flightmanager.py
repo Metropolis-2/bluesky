@@ -45,6 +45,9 @@ class FlightManager(Entity):
         self.gs[-n:] = 0.0
         self.vs[-n:] = 0.0
 
+    def update(self):
+        pass
+
     def convert_to_virtual(self, acidx):
         # TODO: TEST IT
         self.virtual_ac[acidx] = True
