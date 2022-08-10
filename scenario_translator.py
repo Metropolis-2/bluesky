@@ -16,7 +16,11 @@ warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 scenario_name = sys.argv[sys.argv.index('--scen') + 1]
 
 # scenario to read
-scenario = f'scenario/valkenburg/{scenario_name}.scn'
+# if name does not end with '.scn' add it
+if not scenario_name.endswith('.scn'):
+    scenario_name += '.scn'
+    
+scenario = f'scenario/valkenburg/{scenario_name}'
 
 # get x,y offset from user arguments after --offset
 xy_offset_m = [float(i) for i in sys.argv[sys.argv.index('--offset') + 1].split(',')]
