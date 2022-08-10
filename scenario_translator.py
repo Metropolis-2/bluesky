@@ -1,6 +1,8 @@
 """ Plugin to translate and scale aircraft between two different areas. """
 import numpy as np
 from os import path
+import sys
+from rich import print
 import geopandas as gpd
 from shapely.affinity import rotate, scale, translate
 from pyproj import Transformer
@@ -10,11 +12,16 @@ from shapely.errors import ShapelyDeprecationWarning
 warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 
 # ------- USER INPUTS -------
-# scenario to read
-scenario = 'scenario/valkenburg/HYB_2_air.scn'
+# get scenario name from user arguments after --scen
+scenario_name = sys.argv[sys.argv.index('--scen') + 1]
 
-# x_ydistance transalte
-xy_offset_m = (-450, -660)
+# scenario to read
+scenario = f'scenario/valkenburg/{scenario_name}.scn'
+
+# get x,y offset from user arguments after --offset
+xy_offset_m = [float(i) for i in sys.argv[sys.argv.index('--offset') + 1].split(',')]
+
+print(f'[bold green]Will offset:[bright_black] {scenario}[/] by x = [blue]{xy_offset_m[0]}m[/] and y = [blue]{xy_offset_m[1]}m[/]')
 
 # ------- END USER INPUTS -------
 
@@ -66,7 +73,7 @@ def cmd_translator(cmd_split: Union[list, None] = None):
         lat_t, lon_t =  translate_data(*cmd_split[2:4])
         cmd_split[2:4] = [lat_t, lon_t]
 
-        # call itself  to translate the command
+        # call itself to translate the other atdist command
         cmd_split[5:] = cmd_translator(cmd_split[5:])
 
         new_cmd = ' '.join(cmd_split)
@@ -91,6 +98,7 @@ def cmd_translator(cmd_split: Union[list, None] = None):
     return new_cmd
 
 
+print(f'[bold green]Reading scenario file[bright_black] {scenario}...')
 # now open the scenario data
 with open(scenario, 'r') as f:
     data = f.readlines()
@@ -115,6 +123,8 @@ for idx, line in enumerate(data):
 
 # now write the new scenario
 scenario_new = scenario.replace('.scn', '_translated.scn')
+print(f'[bold green]Writing scenario file[bright_black] {scenario_new}...')
+
 with open(scenario_new, 'w') as f:
     f.writelines(line_new)
 
