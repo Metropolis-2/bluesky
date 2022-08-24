@@ -162,9 +162,13 @@ def post_uas_op(data):
     url = f"{base_url}/api/uasoperations/{op_uuid}/actionItems"
     payload={}
     response = requests.request("GET", url, headers=headers, data=payload)
+    
+    if not response.json():
+        print(f'[bold blue]Aircraft with acid: [green]{acid}[/] is waiting for take off command.')
+        console.rule(style='green')
 
     # Check if you need to ask for permission
-    if response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
+    elif response.json()[0]['status'] == 'INITIATED' and response.json()[0]['type'] == 'PERMISSION':
         
         print(f'[blue]Requesting permission for acid: [green]{acid}[/] with operation id: [green]{op_uuid}')
 
