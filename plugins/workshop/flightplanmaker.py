@@ -97,7 +97,7 @@ class MQTTFPClient(mqtt.Client):
         super().__init__()
     
     def run(self):
-        self.connect("192.168.1.2", 1883, 60)
+        self.connect("192.168.2.2", 1883, 60)
         rc = self.loop_start()
         return rc
 

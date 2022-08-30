@@ -120,7 +120,7 @@ class MQTTTelemetryClient(mqtt.Client):
                 telemetry.recv_mqtt(payload)
         
     def run(self):
-        self.connect("192.168.1.2", 1883, 60)
+        self.connect("192.168.2.2", 1883, 60)
         self.subscribe("telemetry/periodic/#", 0)
         rc = self.loop_start()
         return rc
