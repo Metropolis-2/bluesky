@@ -1,5 +1,6 @@
 """ BlueSky traffic implementation."""
 from __future__ import print_function
+from operator import ne
 try:
     from collections.abc import Collection
 except ImportError:
@@ -8,6 +9,11 @@ except ImportError:
 from math import *
 from random import randint
 import numpy as np
+from pyproj import Transformer
+import geopandas as gpd
+from shapely.geometry import Point
+from shapely.ops import nearest_points
+import os
 
 import bluesky as bs
 from bluesky.core import Entity, timed_function
@@ -267,6 +273,14 @@ class Traffic(Entity):
 
         # Default bank angles per flight phase
         self.bphase = np.deg2rad(np.array([15, 35, 35, 35, 15, 45]))
+
+        # create a transformer for the projection
+        self.transformer_m = Transformer.from_crs(4326, 3857, always_xy=True)
+        self.transformer_deg = Transformer.from_crs(3857, 4326)
+
+        # read in the geopackage
+        self.valk_streets = gpd.read_file(os.path.join(bs.settings.data_path, 'valkenburg', 'valk_streets.gpkg'))
+        self.valk_streets = gpd.GeoSeries(list(self.valk_streets.geometry), crs='EPSG:3857')
 
     def reset(self):
         ''' Clear all traffic data upon simulation reset. '''
@@ -667,10 +681,69 @@ class Traffic(Entity):
         
     @timed_function(name='reglog', dt=1)
     def thereglog(self):
+
+        # Step 1: transform lat lon to x_y
+        x_utm,y_utm = self.transformer_m.transform(self.lon, self.lat)
+
+        # Step 2: find nearest point from lat lon to self.valk_streets
+        x_nearest = []
+        y_nearest = []
+
+        for acidx, acid in enumerate(bs.traf.id):
+            x = x_utm[acidx]
+            y = y_utm[acidx]
+
+            nearest_lines = list(self.valk_streets.sindex.nearest([x,y]))
+
+            # if length is 1 then just one nearest line
+            if len(nearest_lines) == 1:
+                # get index from self.valk_streets
+                geom = self.valk_streets[nearest_lines].values[0]
+                p1,_ = nearest_points(geom, Point(x,y))
+                
+            else:
+                dist = []
+                points = []
+                for idx in nearest_lines:
+                    geom = self.valk_streets[idx]
+                    p1,_ = nearest_points(geom, Point(x,y))
+
+                    dist.append(p1.distance(Point(x,y)))
+                    points.append(p1)
+
+                index_min = dist.index(min(dist))
+                p1 = points[index_min]
+            
+            x_nearest.append(p1.x)
+            y_nearest.append(p1.y)
+
+        # Step 3: move to vienna
+        xy_center_vienna = (1821437, 6141036)
+        xy_valkenburg = (491769, 6831288)
+
+        ref_length_vienna = 8
+        ref_length_valkenburg = 0.07
+        scale_factor = ref_length_vienna / ref_length_valkenburg
+
+        # subtract from valkenburg reference point
+        x_pos = np.array(x_nearest) - xy_valkenburg[0]
+        y_pos = np.array(y_nearest) - xy_valkenburg[1]
+
+        # Step 2: scale x_pos and y_pos by self.scale_factor
+        x_pos *= scale_factor
+        y_pos *= scale_factor
+
+        # step 3: translate x_pos and y_pos from self.xy_vienna
+        x_pos += xy_center_vienna[0]
+        y_pos += xy_center_vienna[1]
+
+        # transform back to lat/lon and assign to data
+        lat, lon = self.transformer_deg.transform(x_pos, y_pos)
+
         self.reglog.log(*self.id)
         self.reglog.log(*self.alt/ft)
-        self.reglog.log(*self.lat)
-        self.reglog.log(*self.lon)
+        self.reglog.log(*lat)
+        self.reglog.log(*lon)
         return
 
     @timed_function(name='asas', dt=bs.settings.asas_dt, manual=True)

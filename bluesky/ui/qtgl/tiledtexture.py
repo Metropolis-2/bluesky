@@ -52,7 +52,7 @@ class Tile:
         self.tiley = tiley
         self.idxx = idxx
         self.idxy = idxy
-        self.ext = source[source.rfind('.'):]
+        self.ext = '.png'
 
         self.image = None
         # For the image data, check cache path first

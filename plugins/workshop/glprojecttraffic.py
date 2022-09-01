@@ -3,6 +3,8 @@ import numpy as np
 from os import path
 import geopandas as gpd
 from shapely.affinity import rotate, scale, translate
+from shapely.geometry import Point
+from shapely.ops import nearest_points
 from pyproj import Transformer
 import warnings
 from shapely.errors import ShapelyDeprecationWarning
@@ -38,7 +40,7 @@ class ProjTraffic(Traffic):
         self.ref_length_vienna = 8
 
         # center of airspace in Valkenburg (epsg:3857) (491733, 6830838)
-        self.xy_valkenburg = (491733, 6830838)
+        self.xy_valkenburg = (491769, 6831288)
 
         # reference length of valkenburg (km)
         self.ref_length_valkenburg = 8
@@ -50,6 +52,10 @@ class ProjTraffic(Traffic):
         # create a transformer for the projection
         self.transformer_m = Transformer.from_crs(4326, 3857, always_xy=True)
         self.transformer_deg = Transformer.from_crs(3857, 4326)
+
+        # read in the geopackage
+        self.valk_streets = gpd.read_file(path.join(settings.data_path, 'valkenburg', 'valk_streets.gpkg'))
+        self.valk_streets = gpd.GeoSeries(list(self.valk_streets.geometry), crs='EPSG:3857')
                                     
     def update_route_data(self, data):
         ''' Update GPU buffers with route data from simulation. '''
@@ -71,7 +77,7 @@ class ProjTraffic(Traffic):
         if not self.initialized:
             return
         naircraft = len(data.lat)
-        
+
         if naircraft == 0:
             self.cpalines.set_vertex_count(0)
         else:
@@ -81,7 +87,7 @@ class ProjTraffic(Traffic):
         # Send to superclass
         super().update_aircraft_data(data)
 
-    def transform_data(self, lat, lon):
+    def transform_data(self, lat, lon, acid=None):
         ''' Transform data to new area. '''
 
         # Move drone to Vienna
