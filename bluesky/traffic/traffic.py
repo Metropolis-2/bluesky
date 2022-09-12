@@ -282,6 +282,8 @@ class Traffic(Entity):
         self.valk_streets = gpd.read_file(os.path.join(bs.settings.data_path, 'valkenburg', 'valk_streets.gpkg'))
         self.valk_streets = gpd.GeoSeries(list(self.valk_streets.geometry), crs='EPSG:3857')
 
+        self.const_airspace = gpd.read_file(os.path.join(bs.settings.data_path, 'valkenburg', 'valk_const.gpkg'))
+
     def reset(self):
         ''' Clear all traffic data upon simulation reset. '''
         # Some child reset functions depend on a correct value of self.ntraf
@@ -692,6 +694,11 @@ class Traffic(Entity):
         for acidx, acid in enumerate(bs.traf.id):
             x = x_utm[acidx]
             y = y_utm[acidx]
+
+            if not self.const_airspace.contains(Point(x,y)).values[0]:
+                x_nearest.append(x)
+                y_nearest.append(y)
+                continue
 
             nearest_lines = list(self.valk_streets.sindex.nearest([x,y]))
 

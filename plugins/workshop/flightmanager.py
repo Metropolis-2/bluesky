@@ -101,20 +101,20 @@ class FlightManager(Entity):
                 bs.sim.hold()
                 self.hold_sim = False
 
-    @timed_function(dt=1.0)
-    def check_connections(self):
-        now = datetime.now()
+    # @timed_function(dt=1.0)
+    # # def check_connections(self):
+    # #     now = datetime.now()
 
-        for acidx in range(bs.traf.ntraf):
+    # #     for acidx in range(bs.traf.ntraf):
 
-            # only do this for real aircraft
-            if self.virtual_ac[acidx]:
-                return
+    # #         # only do this for real aircraft
+    # #         if self.virtual_ac[acidx]:
+    # #             return
 
-            time_diff = now - fte.telemetry.last_telemetry_update[acidx]
-            # If more than 5 seconds then we convert to virtual aircraft
-            if time_diff.total_seconds() > 5:
-                self.convert_to_virtual(acidx)
+    # #         time_diff = now - fte.telemetry.last_telemetry_update[acidx]
+    # #         # If more than 5 seconds then we convert to virtual aircraft
+    # #         if time_diff.total_seconds() > 5:
+    # #             self.convert_to_virtual(acidx)
     
     def checkactiveflightplan(self, acidx, active_fp_32bid):
         ''' Check if telemetry flight plan is the same as the one we have. '''
@@ -127,10 +127,10 @@ class FlightManager(Entity):
         # if it is different from the one we have stored, then we have to push the flight plan
         # again because it did not sync
         
-        if not str(fp.flightplans.drone_32bid[acidx]) == str(active_fp_32bid):
-            print('different')
-            print(fp.flightplans.drone_32bid[acidx])
-            print(active_fp_32bid)
+        # if not str(fp.flightplans.drone_32bid[acidx]) == str(active_fp_32bid):
+        #     print('different')
+        #     print(fp.flightplans.drone_32bid[acidx])
+        #     print(active_fp_32bid)
             # fp.flightplans.generate_fp_from_WP(acidx)
 
     # aircraft specific commands
