@@ -53,7 +53,7 @@
 #------------- Done A3 -----------------
 00:03:35>POSTTAKEOFF A3
 00:03:40>EXECUTEFP A2
-00:03:40>A3 ATDIST 52.171627 4.417868 0.001 POSTLANDING A3
+00:03:40>A3 ATDIST 52.171758 4.418146 0.001 POSTLANDING A3
 
 #------------- U-Space airspace is deactivated----------
 00:04:00>HOLDAC A1

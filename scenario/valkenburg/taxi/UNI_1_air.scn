@@ -23,8 +23,8 @@
 
 # after aircraft are posted send flightplans
 00:00:00>connect_telemetry A1 12
-00:00:00>connect_telemetry A2 13
-00:00:00>connect_telemetry B1 14
+00:00:00>connect_telemetry A2 18
+00:00:00>connect_telemetry B1 19
 
 00:00:05>SENDFP A1
 00:00:10>SENDFP A2
