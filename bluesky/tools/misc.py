@@ -11,7 +11,6 @@ Created by  : Jacco M. Hoekstra
 """
 from time import strftime, gmtime
 import numpy as np
-import bluesky as bs
 
 from .aero import cas2tas, mach2tas, kts, fpm, ft
 from .geo import magdec
@@ -114,7 +113,8 @@ def txt2spd(txt):
         txt = txt.upper()
         spd = float(txt.replace("M0.", ".").replace("M", ".").replace("..", "."))
 
-        spd *= kts
+        if not (0.1 < spd < 1.0 or txt.count("M") > 0):
+            spd *= kts
         return spd
     except ValueError:
         raise ValueError(f'Could not parse {txt} as speed.')

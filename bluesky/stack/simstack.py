@@ -239,10 +239,6 @@ def pcall(fname, *pcall_arglst):
 
         # stack any commands that are already due
         checkscen()
-        # # Sort the commands by time
-        # Stack.scentime, Stack.scencmd = zip(*sorted(zip(Stack.scentime, Stack.scencmd)))
-        # # Convert to lists
-        # Stack.scentime, Stack.scencmd = list(Stack.scentime), list(Stack.scencmd)
     except FileNotFoundError as e:
         return False, f"PCALL: File not found'{e.filename}'"
 
@@ -271,10 +267,6 @@ def ic(filename : 'string' = ''):
             for (cmdtime, cmd) in readscn(filename):
                 Stack.scentime.append(cmdtime)
                 Stack.scencmd.append(cmd)
-            # # Sort the commands by time
-            # Stack.scentime, Stack.scencmd = zip(*sorted(zip(Stack.scentime, Stack.scencmd)))
-            # # Convert to lists
-            # Stack.scentime, Stack.scencmd = list(Stack.scentime), list(Stack.scencmd)
             Stack.scenname, _ = os.path.splitext(os.path.basename(filename))
 
             # Remember this filename in IC.scn in scenario folder

@@ -135,7 +135,7 @@ if bs.gui_type == 'qtgl':
                 # Check how far we are
                 count += 1
                 if count % 1000 == 0:
-                    pb.update(int(bytecount / fsize * 100.0))
+                    pb.update((bytecount / fsize * 100.0))
 
                 elems = line.decode(encoding="ascii", errors="ignore").strip().split()
                 if not elems:

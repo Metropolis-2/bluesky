@@ -2,9 +2,10 @@
 import ast
 import glob
 
-from pathlib import Path
+from bluesky.stack.stackbase import sender
+from os import path
 import sys
-import importlib
+import imp
 import bluesky as bs
 from bluesky import settings
 from bluesky.core import timed_function, varexplorer as ve
@@ -28,9 +29,9 @@ class Plugin:
     loaded_plugins = dict()
 
     def __init__(self, fname):
-        self.module_path = fname.parent.as_posix()
-        self.module_name = fname.stem
-        self.module_imp = (fname.parent / fname.stem).as_posix().replace('/', '.')
+        fname = path.normpath(path.splitext(fname)[0].replace('\\', '/'))
+        self.module_path, self.module_name = path.split(fname)
+        self.module_imp = fname.replace('/', '.')
         self.plugin_doc   = ''
         self.plugin_name  = ''
         self.plugin_type  = ''
@@ -45,15 +46,8 @@ class Plugin:
 
         try:
             # Load the plugin
-            # First check if plugin is already locally imported by another plugin in the same directory
-            # In either case update the other import name to avoid double imports
-            self.imp = sys.modules.get(self.module_name)
-            if self.imp:
-                sys.modules[self.module_imp] = self.imp
-            else:
-                self.imp = importlib.import_module(self.module_imp)
-                sys.modules[self.module_name] = self.imp
-
+            mod = imp.find_module(self.module_name, [self.module_path])
+            self.imp = imp.load_module(self.module_name, *mod)
             # Initialize the plugin
             result = self.imp.init_plugin()
             config = result if isinstance(result, dict) else result[0]
@@ -97,7 +91,7 @@ class Plugin:
     @classmethod
     def find_plugins(cls, reqtype):
         ''' Create plugin wrapper objects based on source code of potential plug-in files. '''
-        for fname in Path(settings.plugin_path).glob('**/*.py'):
+        for fname in glob.glob('{}/**/*.py'.format(settings.plugin_path), recursive=True):
             with open(fname, 'rb') as f:
                 source = f.read()
                 try:
@@ -119,7 +113,7 @@ class Plugin:
                                 else:
                                     ret_dicts = [iitem.value]
                                 if len(ret_dicts) not in (1, 2):
-                                    print(f"{fname} looks like a plugin, but init_plugin() doesn't return one or two dicts")
+                                    print(fname + " looks like a plugin, but init_plugin() doesn't return one or two dicts")
                                     continue
                                 ret_names = [el.id if isinstance(el, ast.Name) else '' for el in ret_dicts]
 
@@ -157,7 +151,7 @@ class Plugin:
 def init(mode):
     ''' Initialization function of the plugin system.'''
     # Add plugin path to module search path
-    sys.path.append(Path(settings.plugin_path).absolute().as_posix())
+    sys.path.append(path.abspath(settings.plugin_path))
     # Set plugin type for this instance of BlueSky
     req_type = 'sim' if mode[:3] == 'sim' else 'gui'
     oth_type = 'gui' if mode[:3] == 'sim' else 'sim'

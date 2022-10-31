@@ -22,7 +22,7 @@ palette.set_default_colours(
 # Static defines
 MAX_NAIRCRAFT = 10000
 MAX_NCONFLICTS = 25000
-MAX_ROUTE_LENGTH = 500
+MAX_ROUTE_LENGTH = 5000
 ROUTE_SIZE = 500
 TRAILS_SIZE = 1000000
 
@@ -213,7 +213,6 @@ class Traffic(glh.RenderObject, layer=100):
             self.route.update(vertex=routedata)
             wpname = ''
             for wp, alt, spd in zip(data.wpname, data.wpalt, data.wpspd):
-
                 if alt < 0. and spd < 0.:
                     txt = wp[:12].ljust(24)  # No second line
                 else:
@@ -229,10 +228,12 @@ class Traffic(glh.RenderObject, layer=100):
                     # Speed
                     if spd < 0:
                         txt += "--- "
-                    else:
+                    elif spd > 2.0:
                         txt += "%03d" % int(round(spd / kts))
+                    else:
+                        txt += "M{:.2f}".format(spd)  # Mach number
+
                 wpname += txt.ljust(24)  # Fill out with spaces
-                
             self.routelbl.update(texdepth=np.array(wpname.encode('ascii', 'ignore')),
                                  lat=np.array(data.wplat, dtype=np.float32),
                                  lon=np.array(data.wplon, dtype=np.float32))

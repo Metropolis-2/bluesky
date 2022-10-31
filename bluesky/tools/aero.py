@@ -6,7 +6,7 @@ import numpy as np
 from bluesky import settings
 
 
-settings.set_variable_defaults(casmach_threshold=0)
+settings.set_variable_defaults(casmach_threshold=2.0)
 # International standard atmpshere only up to 72000 ft / 22 km
 
 #
@@ -302,9 +302,10 @@ def vcasormach(spd, h):
         - cas: Calibrated airspeed [m/s]
         - mach: Mach number [-]
     """
-    tas = spd
-    cas = vtas2cas(tas, h)
-    mach   = vtas2mach(tas, h)
+    ismach = np.logical_and(spd > 0.1, spd < casmach_thr)
+    tas = np.where(ismach, vmach2tas(spd, h), vcas2tas(spd, h))
+    cas = np.where(ismach, vtas2cas(tas, h), spd)
+    mach   = np.where(ismach, spd, vtas2mach(tas, h))
     return tas, cas, mach
 
 
@@ -319,7 +320,8 @@ def vcasormach2tas(spd, h):
         Returns:
         - tas: True airspeed [m/s]
     """
-    return vcas2tas(spd, h)
+    ismach = np.logical_and(spd > 0.1, spd < casmach_thr)
+    return np.where(ismach, vmach2tas(spd, h), vcas2tas(spd, h))
 
 
 def crossoveralt(cas, mach):
@@ -542,14 +544,25 @@ def cas2mach(cas, h):
     return M
 
 def casormach(spd,h):
-    # Interpret spd as CAS
-    tas = cas2tas(spd,h)
-    cas = spd
-    m   = cas2mach(spd, h)
+    if 0.1 < spd < casmach_thr:
+        # Interpret spd as Mach number
+        tas = mach2tas(spd, h)
+        cas = mach2cas(spd, h)
+        m   = spd
+    else:
+        # Interpret spd as CAS
+        tas = cas2tas(spd,h)
+        cas = spd
+        m   = cas2mach(spd, h)
     return tas, cas, m
 
 def casormach2tas(spd,h):
-    tas = cas2tas(spd,h)
+    if 0.1 < spd < casmach_thr:
+        # Interpret spd as Mach number
+        tas = mach2tas(spd, h)
+    else:
+        # Interpret spd as CAS
+        tas = cas2tas(spd,h)
     return tas
 
 
