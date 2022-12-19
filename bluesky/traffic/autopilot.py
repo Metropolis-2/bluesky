@@ -347,7 +347,7 @@ class Autopilot(Entity, replaceable=True):
         turntasdiff   = np.maximum(0.,(bs.traf.tas - turntas)*(turntas>0.0))
 
         # t = (v1-v0)/a ; x = v0*t+1/2*a*t*t => dx = (v1*v1-v0*v0)/ (2a)
-        dxturnspdchg = distaccel(turntas,bs.traf.perf.vmax, bs.traf.perf.axmax)
+        dxturnspdchg = distaccel(turntas,bs.traf.tas, bs.traf.perf.axmax)*1.2 #20% margin
 #        dxturnspdchg = 0.5*np.abs(turntas*turntas-bs.traf.tas*bs.traf.tas)/(np.sign(turntas-bs.traf.tas)*np.maximum(0.01,np.abs(ax)))
 #        dxturnspdchg  = np.where(swturnspd, np.abs(turntasdiff)/np.maximum(0.01,ax)*(bs.traf.tas+0.5*np.abs(turntasdiff)),
 #                                                                   0.0*bs.traf.tas)
@@ -387,7 +387,7 @@ class Autopilot(Entity, replaceable=True):
         bs.traf.actwp.turntonextwp = bs.traf.swlnav*np.logical_or(bs.traf.actwp.turntonextwp,useturnspd)
 
         # Which CAS/Mach do we have to keep? VNAV, last turn or next turn?
-        oncurrentleg = (abs(degto180(bs.traf.trk - qdr)) < 2.0) # [deg]
+        oncurrentleg = np.logical_or((abs(degto180(bs.traf.trk - qdr)) < 2.0), np.logical_not(bs.traf.swlnav)) # [deg]
         inoldturn    = (bs.traf.actwp.oldturnspd > 0.) * np.logical_not(oncurrentleg)
 
         # Avoid using old turning speeds when turning of this leg to the next leg
@@ -409,6 +409,10 @@ class Autopilot(Entity, replaceable=True):
                                   bs.traf.actwp.oldturnspd,bs.traf.selspd)
 
         self.inturn = np.logical_or(useturnspd,inoldturn)
+        
+        # Yet another override when not following leg correctly
+        slow_speed = np.minimum(10, bs.traf.selspd)
+        bs.traf.selspd = np.where(np.logical_and(np.logical_not(oncurrentleg),np.logical_not(self.inturn)) , slow_speed, bs.traf.selspd)
 
         #debug if inoldturn[0]:
         #debug     print("inoldturn bs.traf.trk =",bs.traf.trk[0],"qdr =",qdr)
