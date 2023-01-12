@@ -1,6 +1,7 @@
 ''' BlueSky navdata OpenGL visualisation object. '''
 import numpy as np
 import bluesky as bs
+from bluesky import Signal
 from bluesky.ui.qtgl import glhelpers as glh
 from bluesky import settings
 from bluesky.ui.loadvisuals import load_aptsurface
@@ -9,7 +10,7 @@ from bluesky.ui import palette
 
 # Register settings defaults
 settings.set_variable_defaults(
-    gfx_path='data/graphics',
+    gfx_path='graphics',
     text_size=13, apt_size=10,
     wpt_size=10)
 
@@ -58,7 +59,14 @@ class Navdata(glh.RenderObject, layer=-10):
         self.airports = glh.VertexArrayObject(glh.gl.GL_LINE_LOOP)
         self.aptlabels = glh.Text(settings.text_size, (4, 1))
 
+        self.vbuf_asphalt, self.vbuf_concrete, self.vbuf_runways, self.vbuf_rwythr, \
+            self.apt_ctrlat, self.apt_ctrlon, self.apt_indices = load_aptsurface()
+
         bs.net.actnodedata_changed.connect(self.actdata_changed)
+        Signal('panzoom').connect(self.on_panzoom_signal)
+
+    def on_panzoom_signal(self, finished):
+        self.actdata_changed(0, bs.net.get_nodedata(), ('PANZOOM',))
 
     def actdata_changed(self, nodeid, nodedata, changed_elems):
         if 'PANZOOM' in changed_elems:
@@ -87,12 +95,12 @@ class Navdata(glh.RenderObject, layer=-10):
         self.custwplblbuf.create(CUSTWP_SIZE * 10, usage=glh.GLBuffer.UsagePattern.StaticDraw)
 
         # Load vertex data
-        vbuf_asphalt, vbuf_concrete, vbuf_runways, vbuf_rwythr, \
-            self.apt_ctrlat, self.apt_ctrlon, self.apt_indices = load_aptsurface()
-        self.runways.create(vertex=vbuf_runways, color=palette.runways)
-        self.thresholds.create(vertex=vbuf_rwythr, color=palette.thresholds)
-        self.taxiways.create(vertex=vbuf_asphalt, color=palette.taxiways)
-        self.pavement.create(vertex=vbuf_concrete, color=palette.pavement)
+        
+        self.runways.create(vertex=self.vbuf_runways, color=palette.runways)
+        self.thresholds.create(vertex=self.vbuf_rwythr, color=palette.thresholds)
+        self.taxiways.create(vertex=self.vbuf_asphalt, color=palette.taxiways)
+        self.pavement.create(vertex=self.vbuf_concrete, color=palette.pavement)
+        del self.vbuf_asphalt, self.vbuf_concrete, self.vbuf_runways, self.vbuf_rwythr
 
         # ------- Waypoints ------------------------------
         wptvertices = np.array([(0.0, 0.5 * wpt_size), (-0.5 * wpt_size, -0.5 * wpt_size),

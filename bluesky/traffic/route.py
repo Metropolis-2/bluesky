@@ -56,9 +56,10 @@ class Route(Replaceable):
         self.wpstack = []   # Stack with command execured when passing this waypoint
 
         # Made for drones: fly turn mode, means use specified turn radius and optionally turn speed
-        self.wpflyturn = []   # Flyturn (True) or flyover/flyby (False) switch
-        self.wpturnrad = []   # [nm] Turn radius per waypoint (<0 = not specified)
-        self.wpturnspd = []   # [kts] Turn speed (IAS/CAS) per waypoint (<0 = not specified)
+        self.wpflyturn  = []   # Flyturn (True) or flyover/flyby (False) switch
+        self.wpturnrad  = []   # [nm] Turn radius per waypoint (<0 = not specified)
+        self.wpturnspd  = []   # [kts] Turn speed (IAS/CAS) per waypoint (<0 = not specified)
+        self.wpturnhdgr = [] # [deg/s] Heading rate, uses actual speed to calculate bank & radius (<0 = not specified)
 
         # Current actual waypoint
         self.iactwp = -1
@@ -66,24 +67,27 @@ class Route(Replaceable):
         # Set to default addwpt wpmode
         # Note that neither flyby nor flyturn means: flyover)
         self.swflyby   = True    # Default waypoints are flyby waypoint
-        self.swflyturn = False  # Default waypoints are flyby waypoint
+        self.swflyturn = False  # Default waypoints are waypoints w/o specified turn
 
         # Default turn values to be used in flyturn mode
-        self.turnrad  = -999. # Negative value indicating no value has been set
-        self.turnspd  = -999. # Dito, in this case bank angle of vehicle will be used with current speed
+        self.bank      = 25.   # [deg] Default bank angle
+        self.turnrad   = -999. # [m] Negative value indicating no value has been set
+        self.turnspd   = -999. # [kts] Dito, in this case bank angle of vehicle will be used with current speed
+        self.turnhdgr  = -999. # [deg/s] Dito, in this case bank angle of vehicle will be used with current speed
 
         # if the aircraft lands on a runway, the aircraft should keep the
         # runway heading
         # default: False
         self.flag_landed_runway = False
 
-        self.wpdirfrom = []
-        self.wpdistto  = []
+        self.wpdirfrom = []  # [deg] direction leg to wp
+        self.wpdirto   = []  # [deg] direction leg from wp
+        self.wpdistto  = []  # [nm] leg length to wp
         self.wpialt    = []
-        self.wptoalt   = []
-        self.wpxtoalt  = []
-        self.wptorta   = []
-        self.wpxtorta  = []
+        self.wptoalt   = []  # [m] next alt contraint
+        self.wpxtoalt  = []  # [m] distance ot next alt constraint
+        self.wptorta   = []  # [s] next time constraint
+        self.wpxtorta  = []  # [m] distance to next time constaint
 
     @staticmethod
     def get_available_name(data, name_, len_=2):
@@ -149,7 +153,7 @@ class Route(Replaceable):
         
         #debug print ("addwptStack:",args)
         #print("active = ",self.wpname[self.iactwp])
-        #print(args)
+        #print(argsnwp
         # Check FLYBY or FLYOVER switch, instead of adding a waypoint
 
         if len(args) == 1:
@@ -177,19 +181,51 @@ class Route(Replaceable):
             if swwpmode == "TURNRAD" or swwpmode == "TURNRADIUS":
 
                 try:
-                    acrte.turnrad = float(args[1])/ft # arg was originally parsed as wpalt
+                    if args[1]=="OFF":
+                        acrte.turnrad = -999
+                    else:
+                        acrte.turnrad = float(args[1]/ft*nm) #arg was originally parsed as wpalt
                 except:
                     return False,"Error in processing value of turn radius"
+
+                # Switch flyturn automatically when this is set
+                acrte.swflyby = False
+                acrte.swflyturn = True
+
                 return True
 
             elif swwpmode == "TURNSPD" or swwpmode == "TURNSPEED":
 
                 try:
-                    acrte.turnspd = args[1]*kts/ft # [m/s] Arg was wpalt Keep it as IAS/CAS orig in kts, now in m/s
+                    if args[1] == "OFF":
+                        acrte.turnspd = -999
+                    else:
+                        acrte.turnspd = args[1]*kts/ft # [m/s] Arg was wpalt Keep it as IAS/CAS orig in kts, now in m/s
                 except:
                     return False, "Error in processing value of turn speed"
 
+                # Switch flyturn automatically when this is set
+                acrte.swflyby = False
+                acrte.swflyturn = True
+
+
+            elif swwpmode == "TURNHDGRATE" or swwpmode == "TURNHDG" or swwpmode == "TURNHDGR":
+
+                try:
+                    if args[1] == "OFF":
+                        acrte.turnhdgr = -999
+                    else:
+                        acrte.turnhdgr = args[1]/ft # [deg/s] turn rate
+                except:
+                    return False, "Error in processing value of turn heading rate"
+
+                # Switch flyturn automatically when this is set
+                acrte.swflyby = False
+                acrte.swflyturn = True
+
+
                 return True
+
 
         # Convert to positions
         name = args[0].upper().strip()
@@ -260,7 +296,6 @@ class Route(Replaceable):
             i      = 0
             while i<acrte.nwp and rwyrteidx<0:
                 if acrte.wpname[i].count("/") >0:
-#                   print (self.wpname[i])
                     rwyrteidx = i
                 i += 1
 
@@ -389,14 +424,30 @@ class Route(Replaceable):
                 spd = -999
 
             # Do flyby or flyturn processing
-            if wpdata[4] in ['TURNSPD', 'TURNSPEED']:
-                acrte.turnspd = txt2spd(wpdata[5])
+            if wpdata[4] in ['TURNSPD', 'TURNSPEED']: #
+                if wpdata[4]=="OFF":
+                    acrte.turnspd = -999.
+                else:
+                    acrte.turnspd = txt2spd(wpdata[5])
                 acrte.swflyby   = False
                 acrte.swflyturn = True
+
             elif wpdata[4] in ['TURNRAD', 'TURNRADIUS']:
-                acrte.turnrad = float(wpdata[5])
+                if wpdata[4]=="OFF":
+                    acrte.turnrad = -999.
+                else:
+                    acrte.turnrad = float(wpdata[5])*nm
                 acrte.swflyby   = False
                 acrte.swflyturn = True
+
+            elif wpdata[4] in ['TURNHDG', 'TURNHDGR','TURNHDGRATE']:
+                if wpdata[4]=="OFF":
+                    acrte.turnhdgr = -999.
+                else:
+                    acrte.turnhdgr = float(wpdata[5])
+                acrte.swflyby   = False
+                acrte.swflyturn = True
+
             else:
                 # Either it's a flyby, or a typo.
                 acrte.swflyby   = True
@@ -468,7 +519,6 @@ class Route(Replaceable):
     @staticmethod
     def at(acidx: 'acid', atwp : 'wpinroute', *args):
         ''' AT acid, wpinroute [DEL] ALT/SPD/DO alt/spd/stack command'''
-        # args = wpname,SPD/ALT, spd/alt(string)
         acid = bs.traf.id[acidx]
         acrte = Route._routes.get(acid)
         if atwp in acrte.wpname:
@@ -551,6 +601,7 @@ class Route(Replaceable):
                 else:
                     try:
                         acrte.wpalt[wpidx] = txt2alt(alttxt)
+                        acrte.calcfp()   # Recalculate VNAV axes
                     except ValueError as e:
                         success = False
 
@@ -612,14 +663,14 @@ class Route(Replaceable):
                             # Command found, check arguments
                             argtypes = cmdobj.annotations
 
-                            if argtypes[0]=="acid" and not (args[2].upper() in bs.traf.id):
+                            if len(argtypes)>0 and argtypes[0]=="acid" and not (len(args)>2 and args[2].upper() in bs.traf.id):
                                 # missing acid, so add ownship acid
                                 acrte.wpstack[wpidx].append(acid+" "+" ".join(args[1:]))
                             else:
                                 # This command does not need an acid or it is already first argument
                                 acrte.wpstack[wpidx].append(" ".join(args[1:]))
                         except:
-                            return False, "Stacked command "+cmd+"unknown"
+                            return False, "Stacked command "+cmd+" unknown or syntax error"
                     else:
                         # Command line starts with an aircraft id at the beginning of the command line, stack it
                         acrte.wpstack[wpidx].append(" ".join(args[1:]))
@@ -691,6 +742,7 @@ class Route(Replaceable):
             self.wpflyturn[wpidx] = self.swflyturn
             self.wpturnrad[wpidx] = self.turnrad
             self.wpturnspd[wpidx] = self.turnspd
+            self.wpturnhdgr[wpidx] = self.turnhdgr
             self.wprta[wpidx]   = -999.0 # initially no RTA
             self.wpstack[wpidx] = []
 
@@ -705,6 +757,7 @@ class Route(Replaceable):
             self.wpflyturn.insert(wpidx, self.swflyturn)
             self.wpturnrad.insert(wpidx, self.turnrad)
             self.wpturnspd.insert(wpidx, self.turnspd)
+            self.wpturnhdgr.insert(wpidx, self.turnhdgr)
             self.wprta.insert(wpidx,-999.0)       # initially no RTA
             self.wpstack.insert(wpidx,[])
 
@@ -865,13 +918,14 @@ class Route(Replaceable):
         bs.traf.actwp.flyturn[acidx] = acrte.wpflyturn[wpidx]
         bs.traf.actwp.turnrad[acidx] = acrte.wpturnrad[wpidx]
         bs.traf.actwp.turnspd[acidx] = acrte.wpturnspd[wpidx]
+        bs.traf.actwp.turnhdgr[acidx] = acrte.wpturnhdgr[wpidx]
 
         bs.traf.actwp.nextturnlat[acidx], bs.traf.actwp.nextturnlon[acidx], \
         bs.traf.actwp.nextturnspd[acidx], bs.traf.actwp.nextturnrad[acidx], \
-        bs.traf.actwp.nextturnidx[acidx] = acrte.getnextturnwp()
+        bs.traf.actwp.nextturnhdgr[acidx] , bs.traf.actwp.nextturnidx[acidx]\
+            = acrte.getnextturnwp()
 
         # Determine next turn waypoint data
-
 
         # Do calculation for VNAV
         acrte.calcfp()
@@ -909,21 +963,24 @@ class Route(Replaceable):
             bs.traf.actwp.nextspd[acidx] = -999.
 
 
-        qdr,dist = geo.qdrdist(bs.traf.lat[acidx], bs.traf.lon[acidx],
+        qdr_,dist_ = geo.qdrdist(bs.traf.lat[acidx], bs.traf.lon[acidx],
                              bs.traf.actwp.lat[acidx], bs.traf.actwp.lon[acidx])
 
         # Save leg length & direction in actwp data
-        bs.traf.actwp.curlegdir[acidx] = qdr      #[deg]
-        bs.traf.actwp.curleglen[acidx] = dist*nm  #[m]
+        bs.traf.actwp.curlegdir[acidx] = qdr_      #[deg]
+        bs.traf.actwp.curleglen[acidx] = dist_*nm  #[m]
 
-        if acrte.wpflyturn[wpidx] or acrte.wpturnrad[wpidx]<0.:
+        if acrte.wpflyturn[wpidx] and acrte.wpturnrad[wpidx]>0.: # turn radius specified
             turnrad = acrte.wpturnrad[wpidx]
-        else:
-            turnrad = bs.traf.tas[acidx]*bs.traf.tas[acidx]/tan(radians(25.)) / g0 / nm  # [nm]default bank angle 25 deg
+        # Overwrite is hdgrate  defined
+        if acrte.wpflyturn[wpidx] and acrte.wpturnhdgr[wpidx] > 0.: # heading rate specified
+            turnrad = bs.traf.tas[acidx]*360./(2*pi*acrte.wpturnhdgr[wpidx])
+        else:                                                          # nothing specified, use default bank ang;e
+            turnrad = bs.traf.tas[acidx]*bs.traf.tas[acidx]/tan(radians(acrte.bank)) / g0 / nm  # [nm]default bank angle e.g. 25 deg
 
-
-        bs.traf.actwp.turndist[acidx] = (bs.traf.actwp.flyby[acidx] > 0.5)  *   \
-                    turnrad*abs(tan(0.5*radians(max(5., abs(degto180(qdr -
+        bs.traf.actwp.turndist[acidx] = logical_or(acrte.wpturnhdgr[wpidx]>0.,
+                                                      bs.traf.actwp.flyby[acidx] > 0.5)  *   \
+                    turnrad*abs(tan(0.5*radians(max(5., abs(degto180(qdr_ -
                     acrte.wpdirfrom[acrte.iactwp]))))))    # [nm]
 
 
@@ -948,11 +1005,12 @@ class Route(Replaceable):
 
     @stack.command
     @staticmethod
-    def listrte(acidx: 'acid', ipage=0):
+    def listrte(acidx: 'acid', ipagetxt="0"):
         """ LISTRTE acid, [pagenr]
 
             Show list of route in window per page of 5 waypoints/"""
         # First get the appropriate ac route
+        ipage = int(ipagetxt)
         acid = bs.traf.id[acidx]
         acrte = Route._routes.get(acid)
         if acrte.nwp <= 0:
@@ -1015,14 +1073,13 @@ class Route(Replaceable):
         argwhere_arr = argwhere(turnidx_all>=wpidx)
         if argwhere_arr.size == 0:
             # No turn waypoints, return default values
-            return [0., 0., -999., -999., -999.]
+            return [0., 0., -999., -999., -999, -999.]
 
         trnidx = turnidx_all[argwhere(turnidx_all>=wpidx)[0]][0]
 
 
-
         # Return the next turn waypoint info
-        return [self.wplat[trnidx], self.wplon[trnidx], self.wpturnspd[trnidx], self.wpturnrad[trnidx], trnidx]
+        return [self.wplat[trnidx], self.wplon[trnidx], self.wpturnspd[trnidx], self.wpturnrad[trnidx], self.wpturnhdgr[trnidx], trnidx]
 
     def getnextwp(self):
         """Go to next waypoint and return data"""
@@ -1072,8 +1129,8 @@ class Route(Replaceable):
                            self.wpxtoalt[self.iactwp],self.wptoalt[self.iactwp], \
                            self.wpxtorta[self.iactwp], self.wptorta[self.iactwp], \
                            lnavon,self.wpflyby[self.iactwp], \
-                           self.wpflyturn[self.iactwp],self.wpturnrad[self.iactwp],\
-                           self.wpturnspd[self.iactwp], \
+                           self.wpflyturn[self.iactwp],self.wpturnrad[self.iactwp], \
+                           self.wpturnspd[self.iactwp], self.wpturnhdgr[self.iactwp], \
                            nextqdr, swlastwp
 
         # Switch LNAV off when last waypoint has been passed
@@ -1108,7 +1165,7 @@ class Route(Replaceable):
                self.wpxtorta[self.iactwp],self.wptorta[self.iactwp],\
                lnavon,self.wpflyby[self.iactwp], \
                self.wpflyturn[self.iactwp], self.wpturnrad[self.iactwp], \
-               self.wpturnspd[self.iactwp], \
+               self.wpturnspd[self.iactwp], self.wpturnhdgr[self.iactwp],\
                nextqdr, swlastwp
 
     def runactwpstack(self):
@@ -1184,139 +1241,6 @@ class Route(Replaceable):
 
         return True
 
-    def newcalcfp(self): # Not used for now: alternative way which use T/C and T/D as waypoints
-        """Do flight plan calculations"""
-
-        # Remove old top of descents and old top of climbs
-        while self.wpname.count("T/D")>0:
-            self.delwpt("T/D")
-
-        while self.wpname.count("T/C")>0:
-            self.delwpt("T/C")
-
-        # Remove old actual position waypoints
-        while self.wpname.count("A/C")>0:
-            self.delwpt("A/C")
-
-        # Insert actual position as A/C waypoint
-        acidx = bs.traf.id2idx(self.acid)
-        idx = self.iactwp
-        self.insertcalcwp(idx,"A/C")
-        self.wplat[idx] = bs.traf.lat[acidx] # deg
-        self.wplon[idx] = bs.traf.lon[acidx] # deg
-        self.wpalt[idx] = bs.traf.alt[acidx] # m
-        self.wpspd[idx] = bs.traf.tas[acidx] # m/s
-
-        # Calculate distance to last waypoint in route
-        nwp = len(self.wpname)
-        dist2go = [0.0]
-        for i in range(nwp - 2, -1, -1):
-            qdr, dist = geo.qdrdist(self.wplat[i], self.wplon[i],
-                                    self.wplat[i + 1], self.wplon[i + 1])
-            dist2go = [dist2go[0] + dist] + dist2go
-
-        # Make VNAV WP list with only waypoints with altitude constraints
-        # This list we will use to find where to insert t/c and t/d
-        alt = []
-        x   = []
-        name = []
-        for i in range(nwp):
-            if self.wpalt[i]>-1.:
-                alt.append(self.wpalt[i])
-                x.append(dist2go[i])
-                name.append(self.wpname[i]+" ")    # space for check first 2 chars later
-
-        # Find where to insert cruise segment (if any)
-
-        # Find longest segment without altitude constraints
-
-        desslope = clbslope = 1.0
-        crzalt = bs.traf.crzalt[acidx]
-        if crzalt>0.:
-            ilong  = -1
-            dxlong = 0.0
-
-            nvwp = len(alt)
-            for i in range(nvwp-1):
-                if x[i]-x[i+1]> dxlong:
-                    ilong  = i
-                    dxlong = x[i]-x[i+1]
-
-            # VNAV parameters to insert T/Cs and T/Ds
-            crzdist  = 20.*nm   # minimally required distance at cruise level
-            clbslope = 3000.*ft/(10.*nm)    # 1:3 rule for now
-            desslope = clbslope             # 1:3 rule for now
-
-            # Can we get a sufficient distance at cruise altitude?
-            if max(alt[ilong],alt[ilong+1]) < crzalt :
-                dxclimb = (crzalt-alt[ilong])*clbslope
-                dxdesc  = (crzalt-alt[ilong+1])*desslope
-                if x[ilong] - x[ilong+1] > dxclimb + crzdist + dxdesc:
-
-                    # Insert T/C (top of climb) at cruise level
-                   name.insert(ilong+1,"T/C")
-                   alt.insert(ilong+1,crzalt)
-                   x.insert(ilong+1,x[ilong]+dxclimb)
-
-                    # Insert T/D (top of descent) at cruise level
-                   name.insert(ilong+2,"T/D")
-                   alt.insert(ilong+2,crzalt)
-                   x.insert(ilong+2,x[ilong+1]-dxdesc)
-
-        # Compare angles to rates:
-        epsh = 50.*ft   # Nothing to be done for small altitude changes
-        epsx = 1.*nm    # [m] Nothing to be done at this short range
-        i = 0
-        while i<len(alt)-1:
-            if name[i][:2]=="T/":
-                continue
-
-            dy = alt[i+1]-alt[i]   # alt change (pos = climb)
-            dx = x[i]-x[i+1]       # distance (positive)
-
-            dxdes = abs(dy)/desslope
-            dxclb = abs(dy)/clbslope
-
-            if dy<epsh and  dx + epsx > dxdes:   # insert T/D?
-
-               name.insert(i+1,"T/D")
-               alt.insert(i+1,alt[i])
-               x.insert(i+1,x[i+1]-dxdes)
-               i += 1
-
-            elif dy>epsh and  dx + epsx > dxclb:  # insert T/C?
-
-               name.insert(i+1,"T/C")
-               alt.insert(i+1,alt[i+1])
-               x.insert(i+1,x[i]+dxclb)
-               i += 2
-            else:
-                i += 1
-
-        # Now insert T/Cs and T/Ds in actual flight plan
-        nvwp = len(alt)
-        for i in range(nvwp,-1,-1):
-
-            # Copy all new waypoints (which are all named T/C or T/D)
-            if name[i][:2]=="T/":
-
-                # Find place in flight plan to insert T/C or T/D
-                j = nvwp-1
-                while dist2go[j]<x[i] and j>1:
-                    j=j-1
-
-                # Interpolation factor for position on leg
-                f   = (x[i]-dist2go[j+1])/(dist2go[j]-dist2go[j+1])
-
-                lat = f*self.wplat[j]+(1.-f)*self.wplat[j+1]
-                lon = f*self.wplon[j]+(1.-f)*self.wplon[j+1]
-
-                self.wpname.insert(j,name[i])
-                self.wptype.insert(j,Route.calcwp)
-                self.wplat.insert(j,lat)
-                self.wplon.insert(j,lon)
-                self.wpalt.insert(j,alt[i])
-                self.wpspd.insert(j,-999.)
 
     def insertcalcwp(self, i, name):
         """Insert empty wp with no attributes at location i"""
@@ -1330,21 +1254,27 @@ class Route(Replaceable):
 
     def calcfp(self): # Current Flight Plan calculations, which actualize based on flight condition
         """Do flight plan calculations"""
-#        self.delwpt("T/D")
-#        self.delwpt("T/C")
+
+        # Note: No Top of Descent or Top of Climb can inserted here
+        # as this depends on the speed, which might be undefined (often is)
+        # Guidance in autpilot.py takes care of ToD and ToC logic while flying using current speed
+        # This routine prepares data for this by adding a "ruler" along the flight plan in the form of
+        # distance at wp to next altitude constraint (xtoalt), its index ial and the value (toalt)
+        # same logic is used for time consarint (requieed time of arrival) RTAs at waypoints
 
         # Direction to waypoint
         self.nwp = len(self.wpname)
 
-        # Create flight plan calculation table
-        self.wpdirfrom   = self.nwp*[0.]
-        self.wpdistto    = self.nwp*[0.]
-        self.wpialt      = self.nwp*[-1]
-        self.wptoalt     = self.nwp*[-999.]
-        self.wpxtoalt    = self.nwp*[1.]  # Avoid division by zero
-        self.wpirta      = self.nwp*[-1]
-        self.wptorta     = self.nwp*[-999.]
-        self.wpxtorta    = self.nwp*[1.]  #[m] Avoid division by zero
+        # Create cleared flight plan calculation table
+        self.wpdirfrom   = self.nwp*[0.]  # [deg] Direction of leg laving this waypoint
+        self.wpdirto     = self.nwp*[0.]  # [deg] Direction of leg ot this waypoint (if it exists)
+        self.wpdistto    = self.nwp*[0.]  # [nm] Distance of leg to this waypoint in nm
+        self.wpialt      = self.nwp*[-1]  # wp index of next alttud constraint
+        self.wptoalt     = self.nwp*[-999.] # [m] next alt contraint
+        self.wpxtoalt    = self.nwp*[1.]  # [m] dist to next alt constraint, default 1.0 to avoid division by zero
+        self.wpirta      = self.nwp*[-1]  # wp index of next time constraint
+        self.wptorta     = self.nwp*[-999.] # [s] next time constraint
+        self.wpxtorta    = self.nwp*[1.]  # [m] dist to next time constraint, default 1.0 to avoid division by zero
 
         # No waypoints: make empty variables to be safe and return: nothing to do
         if self.nwp==0:
@@ -1356,9 +1286,18 @@ class Route(Replaceable):
         for i in range(0, self.nwp - 1):
             qdr,dist = geo.qdrdist(self.wplat[i]  ,self.wplon[i],
                                 self.wplat[i+1],self.wplon[i+1])
-            self.wpdirfrom[i] = qdr
+            self.wpdirfrom[i] = qdr    # [deg]
             self.wpdistto[i+1]  = dist #[nm]  distto is in nautical miles
 
+        # Also add "from direction" as to directions so no need to shift for actwpdata
+        # direction to will be overwritten in actwpdata in case of a direct to
+        # Add current pos to first waypoint as default value for direction to 1st waypoint
+        iac = bs.traf.id2idx(self.acid)
+        qdr,dist = geo.qdrdist(bs.traf.lat[iac],bs.traf.lon[iac],
+                               self.wplat[0],self.wplon[0])
+        self.wpdirto = [qdr]+self.wpdirfrom[0:-1] #[deg] Direction to waypoints
+
+        # Continue flying in the saem direction
         if self.nwp>1:
             self.wpdirfrom[-1] = self.wpdirfrom[-2]
 
@@ -1487,7 +1426,7 @@ class Route(Replaceable):
         acid = bs.traf.id[acidx]
         acrte = Route._routes.get(acid)
         # Open file in append mode, write header
-        with open(bs.settings.resolve_path(bs.settings.log_path) / 'routelog.txt', "a") as f:
+        with open(bs.resource(bs.settings.log_path) / 'routelog.txt', "a") as f:
             f.write("\nRoute "+acid+":\n")
             f.write("(name,type,lat,lon,alt,spd,toalt,xtoalt)  ")
             f.write("type: 0=latlon 1=navdb  2=orig  3=dest  4=calwp\n")
